@@ -1,41 +1,42 @@
 import logging
 import requests
-from .media import create_media_payload
-from .auth import create_oauth1_auth
+
 from .config import get_credential
+from .media import upload_media
+from .twitterapi_io import request, require_login_cookie, require_proxy
 from .utils import extract_tweet_id
 
 logger = logging.getLogger(__name__)
 
-def create_text_payload(text: str) -> dict[str, str]:
-    return {"text": text}
+def create_tweet_payload(
+    text: str,
+    media_path: str | None = None,
+    reply_to: str | None = None,
+) -> dict:
+    login_cookie = require_login_cookie()
+    proxy = require_proxy()
+    payload = {
+        "login_cookies": login_cookie,
+        "tweet_text": text,
+        "proxy": proxy,
+    }
 
-def create_tweet_payload(text: str, media_path: str | None = None, reply_to: str | None = None) -> dict:
-    payload = {}
-    
-    # Add text if provided and not empty
-    if text and text.strip():
-        payload.update(create_text_payload(text=text))
-    
-    # Add media if provided
-    if media_path:
-        media_payload = create_media_payload(path=media_path)
-        payload.update(media_payload)
-    
-    # Add reply parameters if provided
     if reply_to:
-        tweet_id = extract_tweet_id(reply_to)
-        payload["reply"] = {
-            "in_reply_to_tweet_id": tweet_id
-        }
-    
+        payload["reply_to_tweet_id"] = extract_tweet_id(reply_to)
+
+    if media_path:
+        media_ids = upload_media(path=media_path)
+        if not media_ids:
+            raise RuntimeError("Media upload failed; aborting tweet.")
+        payload["media_ids"] = media_ids
+
     return payload
 
 def construct_tweet_link(tweet_id: str) -> str:
     """Construct the tweet link from the username and tweet ID."""
-    username = get_credential("X_USERNAME")
+    username = get_credential("TWITTERAPI_IO_USERNAME")
     if not username:
-        return f"https://x.com/status/{tweet_id}"
+        return f"https://x.com/i/status/{tweet_id}"
     return f"https://x.com/{username}/status/{tweet_id}"
 
 
@@ -46,55 +47,49 @@ def handle_tweet_response(response: requests.Response) -> tuple[bool, str]:
     - success: Boolean indicating if the tweet was posted successfully
     - message: A user-friendly message describing the result
     """
-    if response.ok:
-        tweet_id = response.json().get("data", {}).get("id", "")
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    if response.ok and payload.get("status") == "success":
+        tweet_id = payload.get("tweet_id", "")
         tweet_link = construct_tweet_link(tweet_id=tweet_id)
         logger.info("Successfully posted tweet: %s", tweet_link)
         return True, f"Tweet posted successfully! View it at: {tweet_link}"
 
-    try:
-        error_details = response.json()
-        if 'errors' in error_details:
-            error_messages = [error['message'] for error in error_details['errors']]
-            error_msg = '; '.join(error_messages)
-            logger.error("Twitter API errors: %s", error_messages)
-        else:
-            status_code = response.status_code
-            if status_code == 429:
-                error_msg = "Rate limit exceeded. Please wait a few minutes and try again."
-            else:
-                detail = error_details.get('detail') or error_details.get('title') or response.reason
-                error_msg = f"Error ({status_code}): {detail}"
-                logger.error("API error %d: %s", status_code, detail)
-    except ValueError:
-        error_msg = f"Error ({response.status_code}): {response.reason}"
-        logger.error("Failed to parse error response: %s", response.text)
+    if response.status_code == 429:
+        error_msg = "Rate limit exceeded. Please wait a few minutes and try again."
+    else:
+        detail = payload.get("msg") or payload.get("message") or response.reason
+        error_msg = f"Error ({response.status_code}): {detail}"
+        logger.error("API error %d: %s", response.status_code, detail)
     
     logger.error("Failed to post tweet: %s", error_msg)
     return False, f"Failed to post tweet: {error_msg}"
 
-def submit_tweet(text: str, media_path: str | None = None, reply_to: str | None = None) -> requests.Response:
+def submit_tweet(
+    text: str,
+    media_path: str | None = None,
+    reply_to: str | None = None,
+) -> requests.Response:
     """
-    Post a tweet with optional media and reply using OAuth1 authentication.
+    Post a tweet with optional media and reply using TwitterAPI.io.
     Returns the raw response object.
     """
     tweet_payload = create_tweet_payload(text=text, media_path=media_path, reply_to=reply_to)
-    logger.info(f"Posting tweet with payload: {tweet_payload}")
-    
-    auth = create_oauth1_auth()
-    return requests.request(
-        method="POST",
-        url="https://api.x.com/2/tweets",
-        json=tweet_payload,
-        auth=auth,
-        headers={
-            "Content-Type": "application/json",
-        },
-    )
+    redacted_payload = dict(tweet_payload)
+    if "login_cookies" in redacted_payload:
+        redacted_payload["login_cookies"] = "REDACTED"
+    if "proxy" in redacted_payload:
+        redacted_payload["proxy"] = "REDACTED"
+    logger.info("Posting tweet with payload: %s", redacted_payload)
+
+    return request("POST", "/twitter/create_tweet_v2", json_body=tweet_payload)
 
 def post_tweet(text: str, media_path: str | None = None, reply_to: str | None = None) -> tuple[bool, str]:
     """
-    Post a tweet with optional media and reply using OAuth1 authentication.
+    Post a tweet with optional media and reply using TwitterAPI.io.
     Returns (success, message) tuple.
     """
     try:
@@ -106,7 +101,7 @@ def post_tweet(text: str, media_path: str | None = None, reply_to: str | None = 
 
 def get_tweets_by_ids(tweet_ids: list[str]) -> tuple[bool, str | dict]:
     """
-    Retrieve tweets by their IDs using the X API.
+    Retrieve tweets by their IDs using TwitterAPI.io.
     Returns (success, result) tuple where result is either error message or tweet data.
     """
     if not tweet_ids:
@@ -116,39 +111,20 @@ def get_tweets_by_ids(tweet_ids: list[str]) -> tuple[bool, str | dict]:
         return False, "Too many tweet IDs provided (maximum 100)"
     
     try:
-        auth = create_oauth1_auth()
         ids_param = ",".join(tweet_ids)
-        
-        response = requests.get(
-            url="https://api.x.com/2/tweets",
-            params={
-                "ids": ids_param,
-                "tweet.fields": "created_at,author_id,public_metrics,context_annotations,lang,possibly_sensitive",
-                "expansions": "author_id",
-                "user.fields": "name,username,verified,public_metrics"
-            },
-            auth=auth
+        response = request(
+            "GET",
+            "/twitter/tweets",
+            params={"tweet_ids": ids_param},
         )
-        
-        if response.ok:
-            data = response.json()
+        payload = response.json()
+        if response.ok and payload.get("status") == "success":
             logger.info("Successfully retrieved tweets")
-            return True, data
-        else:
-            try:
-                error_details = response.json()
-                if 'errors' in error_details:
-                    error_messages = [error['detail'] for error in error_details['errors']]
-                    error_msg = '; '.join(error_messages)
-                else:
-                    error_msg = f"Error ({response.status_code}): {response.reason}"
-                logger.error("Failed to retrieve tweets: %s", error_msg)
-                return False, error_msg
-            except ValueError:
-                error_msg = f"Error ({response.status_code}): {response.reason}"
-                logger.error("Failed to parse error response: %s", response.text)
-                return False, error_msg
-                
+            return True, payload
+
+        message = payload.get("message") or payload.get("msg") or response.reason
+        logger.error("Failed to retrieve tweets: %s", message)
+        return False, message
     except Exception as e:
         logger.error("Error retrieving tweets: %s", str(e))
         return False, f"Error retrieving tweets: {str(e)}"

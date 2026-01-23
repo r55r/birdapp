@@ -1,27 +1,39 @@
 import logging
-import requests
-from .auth import create_oauth1_auth
+
+from .twitterapi_io import request, require_login_cookie, require_proxy
 
 logger = logging.getLogger("uvicorn.error")
 
-def create_media_payload(path: str | None) -> dict[str, dict[str, list[str]]]:
-    """Upload media using OAuth1 authentication and return a payload containing the media ID."""
+def upload_media(path: str | None) -> list[str]:
+    """Upload media via TwitterAPI.io and return uploaded media IDs."""
     if not path:
-        return {"media": {"media_ids": []}}
-        
-    auth = create_oauth1_auth()
-    upload_url = "https://upload.twitter.com/1.1/media/upload.json"
-    
+        return []
+
+    login_cookie = require_login_cookie()
+    proxy = require_proxy()
+
     try:
         with open(path, "rb") as file:
-            files = {"media": file}
-            logger.info(f"Uploading media to {upload_url}")
-            response = requests.post(upload_url, auth=auth, files=files)
-            response.raise_for_status()
-            media_id = response.json().get("media_id_string")
-            if media_id:
-                return {"media": {"media_ids": [media_id]}}
+            files = {"file": file}
+            data = {
+                "proxy": proxy,
+                "login_cookies": login_cookie,
+            }
+            logger.info("Uploading media via TwitterAPI.io")
+            response = request(
+                "POST",
+                "/twitter/upload_media_v2",
+                files=files,
+                data=data,
+            )
+            payload = response.json()
+            if response.ok and payload.get("status") == "success":
+                media_id = payload.get("media_id")
+                if media_id:
+                    return [media_id]
+            message = payload.get("msg") or response.text
+            logger.error("Media upload failed: %s", message)
     except Exception as e:
-        logger.error(f"Error uploading media: {e}")
-    
-    return {"media": {"media_ids": []}}
+        logger.error("Error uploading media: %s", e)
+
+    return []

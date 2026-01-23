@@ -36,40 +36,46 @@ def save_config(config: Dict[str, str]) -> None:
         raise RuntimeError(f"Failed to save config: {e}")
 
 def get_credential(key: str) -> Optional[str]:
-    """Get a credential from the config file."""
-    config = load_config()
-    return config.get(key)
+    """Get a credential from the environment or config file."""
+    return os.getenv(key) or load_config().get(key)
 
 def prompt_for_credentials() -> None:
-    """Prompt user for Twitter API credentials and save them."""
-    print("X CLI Configuration")
-    print("==================")
-    print("Please enter your Twitter API credentials.")
-    print("You can get these from https://developer.twitter.com/")
+    """Prompt user for TwitterAPI.io credentials and save them."""
+    print("TwitterAPI.io CLI Configuration")
+    print("===============================")
+    print("Please enter your TwitterAPI.io credentials.")
+    print("You can get the API key from https://twitterapi.io/")
     print("(Sensitive fields will be hidden as you type)")
     print()
-    
+
     credentials = load_config()
-    
-    # Prompt for each credential (hide sensitive fields)
-    credentials['X_API_KEY'] = getpass.getpass("API Key: ").strip()
-    credentials['X_API_SECRET'] = getpass.getpass("API Secret: ").strip()
-    credentials['X_ACCESS_TOKEN'] = getpass.getpass("Access Token: ").strip()
-    credentials['X_ACCESS_TOKEN_SECRET'] = getpass.getpass("Access Token Secret: ").strip()
-    credentials['X_USERNAME'] = input("Username (without @): ").strip()
-    
-    # Validate that all fields are filled
-    missing = [key for key, value in credentials.items() if not value]
+
+    credentials["TWITTERAPI_IO_API_KEY"] = getpass.getpass("API Key: ").strip()
+    credentials["TWITTERAPI_IO_PROXY"] = getpass.getpass("Proxy (required): ").strip()
+    credentials["TWITTERAPI_IO_USERNAME"] = input("Username (without @): ").strip()
+    credentials["TWITTERAPI_IO_EMAIL"] = input("Email: ").strip()
+    credentials["TWITTERAPI_IO_PASSWORD"] = getpass.getpass("Password: ").strip()
+    totp_secret = getpass.getpass("TOTP Secret (optional): ").strip()
+    if totp_secret:
+        credentials["TWITTERAPI_IO_TOTP_SECRET"] = totp_secret
+
+    required_keys = (
+        "TWITTERAPI_IO_API_KEY",
+        "TWITTERAPI_IO_PROXY",
+        "TWITTERAPI_IO_USERNAME",
+        "TWITTERAPI_IO_EMAIL",
+        "TWITTERAPI_IO_PASSWORD",
+    )
+    missing = [key for key in required_keys if not credentials.get(key)]
     if missing:
         print(f"\nError: Missing required fields: {', '.join(missing)}")
         return
-    
-    # Save the configuration
+
     try:
         save_config(credentials)
         config_path = get_config_path()
         print(f"\n✅ Configuration saved to {config_path}")
-        print("You can now use the CLI to post tweets!")
+        print("Next, run `birdapp auth login` to obtain a login cookie.")
     except RuntimeError as e:
         print(f"\n❌ {e}")
 
@@ -79,44 +85,12 @@ def show_config() -> None:
     if not config:
         print("No configuration found. Run `birdapp auth config` to set up credentials.")
         return
-    
+
     print("Current configuration:")
-    print(f"  Username: {config.get('X_USERNAME', 'Not set')}")
-    print(f"  API Key: {'*' * len(config.get('X_API_KEY', '')) if config.get('X_API_KEY') else 'Not set'}")
-    print(f"  API Secret: {'*' * len(config.get('X_API_SECRET', '')) if config.get('X_API_SECRET') else 'Not set'}")
-    print(f"  Access Token: {'*' * len(config.get('X_ACCESS_TOKEN', '')) if config.get('X_ACCESS_TOKEN') else 'Not set'}")
-    print(f"  Access Token Secret: {'*' * len(config.get('X_ACCESS_TOKEN_SECRET', '')) if config.get('X_ACCESS_TOKEN_SECRET') else 'Not set'}")
-    print("  OAuth2 Client ID: " + ("Set" if config.get("X_OAUTH2_CLIENT_ID") else "Not set"))
-    print("  OAuth2 Client Secret: " + ("Set" if config.get("X_OAUTH2_CLIENT_SECRET") else "Not set"))
-    print("  OAuth2 Redirect URI: " + (config.get("X_OAUTH2_REDIRECT_URI") or "Not set"))
-    print("  OAuth2 Scopes: " + (config.get("X_OAUTH2_SCOPES") or "Not set"))
-
-def prompt_for_oauth2_credentials() -> None:
-    """Prompt user for OAuth2 credentials and save them."""
-    print("X CLI OAuth2 Configuration")
-    print("==========================")
-    print("Configure OAuth2 (Authorization Code with PKCE).")
-    print("You can get these from your app settings in the X developer console.")
-    print()
-
-    config = load_config()
-    config["X_OAUTH2_CLIENT_ID"] = input("OAuth2 Client ID: ").strip()
-    client_secret = getpass.getpass("OAuth2 Client Secret (optional): ").strip()
-    if client_secret:
-        config["X_OAUTH2_CLIENT_SECRET"] = client_secret
-    config["X_OAUTH2_REDIRECT_URI"] = input("OAuth2 Redirect URI: ").strip()
-    scopes = input("OAuth2 Scopes (space-separated, optional): ").strip()
-    if scopes:
-        config["X_OAUTH2_SCOPES"] = scopes
-
-    missing = [key for key in ("X_OAUTH2_CLIENT_ID", "X_OAUTH2_REDIRECT_URI") if not config.get(key)]
-    if missing:
-        print(f"\nError: Missing required fields: {', '.join(missing)}")
-        return
-
-    try:
-        save_config(config)
-        config_path = get_config_path()
-        print(f"\n✅ OAuth2 configuration saved to {config_path}")
-    except RuntimeError as e:
-        print(f"\n❌ {e}")
+    print("  API Key: " + ("Set" if config.get("TWITTERAPI_IO_API_KEY") else "Not set"))
+    print("  Proxy: " + ("Set" if config.get("TWITTERAPI_IO_PROXY") else "Not set"))
+    print("  Username: " + (config.get("TWITTERAPI_IO_USERNAME") or "Not set"))
+    print("  Email: " + ("Set" if config.get("TWITTERAPI_IO_EMAIL") else "Not set"))
+    print("  Password: " + ("Set" if config.get("TWITTERAPI_IO_PASSWORD") else "Not set"))
+    print("  TOTP Secret: " + ("Set" if config.get("TWITTERAPI_IO_TOTP_SECRET") else "Not set"))
+    print("  Login Cookie: " + ("Set" if config.get("TWITTERAPI_IO_LOGIN_COOKIE") else "Not set"))

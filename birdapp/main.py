@@ -1,60 +1,27 @@
 import argparse
 import json
-import os
+
 from .tweet import post_tweet, get_tweets_by_ids
 from .config import (
     get_credential,
     prompt_for_credentials,
-    prompt_for_oauth2_credentials,
     show_config,
 )
-from .oauth2 import oauth2_login_flow, oauth2_whoami
+from .twitterapi_io import login_user
 from .storage.importer import import_archive
 from .user import (
     get_user_by_id, get_users_by_ids,
     get_user_by_username, get_users_by_usernames,
-    AVAILABLE_USER_FIELDS, AVAILABLE_EXPANSIONS, AVAILABLE_TWEET_FIELDS
 )
 
-def _get_env_or_config(key: str) -> str | None:
-    return os.getenv(key) or get_credential(key)
 
-
-def _has_oauth1_credentials() -> bool:
-    return all(
-        _get_env_or_config(key)
-        for key in (
-            "X_API_KEY",
-            "X_API_SECRET",
-            "X_ACCESS_TOKEN",
-            "X_ACCESS_TOKEN_SECRET",
-        )
-    )
-
-
-def _has_oauth2_config() -> bool:
-    return bool(
-        _get_env_or_config("X_OAUTH2_CLIENT_ID")
-        and _get_env_or_config("X_OAUTH2_REDIRECT_URI")
-    )
-
-
-def _prompt_for_auth_flow() -> str:
-    print("Select authentication flow:")
-    print("  1) OAuth1 (user tokens)")
-    print("  2) OAuth2 (authorization code with PKCE)")
-    while True:
-        choice = input("Choose 1 or 2 (oauth1/oauth2): ").strip().lower()
-        if choice in {"1", "oauth1", "oauth 1"}:
-            return "oauth1"
-        if choice in {"2", "oauth2", "oauth 2"}:
-            return "oauth2"
-        print("Please enter 1 or 2.")
+def _has_required_credentials(keys: tuple[str, ...]) -> bool:
+    return all(get_credential(key) for key in keys)
 
 
 def main() -> None:
     """Main CLI entry point"""
-    parser = argparse.ArgumentParser(description="X CLI - Post tweets from the command line")
+    parser = argparse.ArgumentParser(description="TwitterAPI.io CLI - Post tweets from the command line")
     subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
 
     # Auth subcommand
@@ -63,17 +30,12 @@ def main() -> None:
 
     auth_config_parser = auth_subparsers.add_parser("config", help="Configure authentication")
     auth_config_parser.add_argument("--show", action="store_true", help="Show current configuration")
-    auth_flow_group = auth_config_parser.add_mutually_exclusive_group()
-    auth_flow_group.add_argument("--oauth1", action="store_true", help="Configure OAuth1 credentials")
-    auth_flow_group.add_argument("--oauth2", action="store_true", help="Configure OAuth2 credentials")
 
-    auth_login_parser = auth_subparsers.add_parser("login", help="Authenticate via OAuth2")
+    auth_login_parser = auth_subparsers.add_parser("login", help="Authenticate via TwitterAPI.io login_v2")
     auth_login_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
 
-    auth_whoami_parser = auth_subparsers.add_parser("whoami", help="Show authenticated user info")
-    auth_whoami_parser.add_argument(
-        "--user-id", dest="user_id", type=str, help="Use stored token for user id"
-    )
+    auth_whoami_parser = auth_subparsers.add_parser("whoami", help="Show configured user info")
+    auth_whoami_parser.add_argument("--username", type=str, help="Override username")
     auth_whoami_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
 
     # Tweet subcommand
@@ -97,12 +59,6 @@ def main() -> None:
                             help='Force lookup by ID (default: auto-detect based on format)')
     user_parser.add_argument('--by-username', action='store_true', 
                             help='Force lookup by username (default: auto-detect based on format)')
-    user_parser.add_argument('--fields', nargs='+', choices=AVAILABLE_USER_FIELDS,
-                            help='User fields to include in response')
-    user_parser.add_argument('--expansions', nargs='+', choices=AVAILABLE_EXPANSIONS,
-                            help='Data expansions to include')
-    user_parser.add_argument('--tweet-fields', nargs='+', choices=AVAILABLE_TWEET_FIELDS,
-                            help='Tweet fields to include when expanding tweets')
     user_parser.add_argument('--json', action='store_true', 
                             help='Output raw JSON response')
     user_parser.add_argument('--format', choices=['simple', 'detailed', 'full'], default='simple',
@@ -138,41 +94,46 @@ def main() -> None:
         if args.auth_command == "config":
             if args.show:
                 show_config()
-            elif args.oauth1:
-                prompt_for_credentials()
-            elif args.oauth2:
-                prompt_for_oauth2_credentials()
             else:
-                flow = _prompt_for_auth_flow()
-                if flow == "oauth1":
-                    prompt_for_credentials()
-                else:
-                    prompt_for_oauth2_credentials()
+                prompt_for_credentials()
         elif args.auth_command == "login":
-            if not _has_oauth2_config():
-                if _has_oauth1_credentials():
-                    print("OAuth1 credentials are configured; no login step is required.")
-                else:
-                    print("OAuth2 credentials are not configured. Run `birdapp auth config`.")
+            required_keys = (
+                "TWITTERAPI_IO_API_KEY",
+                "TWITTERAPI_IO_USERNAME",
+                "TWITTERAPI_IO_EMAIL",
+                "TWITTERAPI_IO_PASSWORD",
+                "TWITTERAPI_IO_PROXY",
+            )
+            if not _has_required_credentials(required_keys):
+                print("TwitterAPI.io credentials are not configured. Run `birdapp auth config`.")
                 return
 
             try:
-                result = oauth2_login_flow()
+                result = login_user()
                 if args.json:
                     print(json.dumps(result, indent=2))
                 else:
-                    print(json.dumps(result, indent=2))
+                    print("✅ Login successful. Login cookie saved.")
             except Exception as e:
-                print(f"❌ Error during OAuth2 flow: {str(e)}")
+                print(f"❌ Error during login: {str(e)}")
         else:
+            username = args.username or get_credential("TWITTERAPI_IO_USERNAME")
+            if not username:
+                print("No username configured. Run `birdapp auth config` or pass --username.")
+                return
             try:
-                result = oauth2_whoami(args.user_id)
-                if args.json:
+                success, result = get_user_by_username(username)
+                if not success:
+                    print(f"❌ Failed to get user info: {result}")
+                elif args.json:
                     print(json.dumps(result, indent=2))
                 else:
-                    print(json.dumps(result, indent=2))
+                    if isinstance(result, dict):
+                        format_users_output(result, "full")
+                    else:
+                        print(f"❌ Failed to get user info: {result}")
             except Exception as e:
-                print(f"❌ Error during OAuth2 flow: {str(e)}")
+                print(f"❌ Error getting user info: {str(e)}")
         return
     
     # Handle tweet command
@@ -238,35 +199,15 @@ def main() -> None:
             if len(identifiers) == 1:
                 # Single user lookup
                 if by_id:
-                    success, result = get_user_by_id(
-                        identifiers[0],
-                        user_fields=args.fields,
-                        expansions=args.expansions,
-                        tweet_fields=args.tweet_fields
-                    )
+                    success, result = get_user_by_id(identifiers[0])
                 else:
-                    success, result = get_user_by_username(
-                        identifiers[0],
-                        user_fields=args.fields,
-                        expansions=args.expansions,
-                        tweet_fields=args.tweet_fields
-                    )
+                    success, result = get_user_by_username(identifiers[0])
             else:
                 # Multiple users lookup
                 if by_id:
-                    success, result = get_users_by_ids(
-                        identifiers,
-                        user_fields=args.fields,
-                        expansions=args.expansions,
-                        tweet_fields=args.tweet_fields
-                    )
+                    success, result = get_users_by_ids(identifiers)
                 else:
-                    success, result = get_users_by_usernames(
-                        identifiers,
-                        user_fields=args.fields,
-                        expansions=args.expansions,
-                        tweet_fields=args.tweet_fields
-                    )
+                    success, result = get_users_by_usernames(identifiers)
             
             if success:
                 if args.json:
@@ -287,7 +228,7 @@ def main() -> None:
         try:
             username = args.username
             if not username and not args.url and not args.path:
-                username = get_credential("X_USERNAME")
+                username = get_credential("TWITTERAPI_IO_USERNAME")
             result = import_archive(
                 args.db,
                 username=username,
@@ -307,163 +248,136 @@ def main() -> None:
 
 def format_tweets_output(data: dict, format_type: str):
     """Format and display tweet data"""
-    if 'data' not in data:
+    if 'tweets' not in data:
         print("No tweets found")
         return
-    
-    tweets = data['data']
-    users = {user['id']: user for user in data.get('includes', {}).get('users', [])}
-    
+
+    tweets = data['tweets']
+
     for tweet in tweets:
-        author_id = tweet.get('author_id')
-        author = users.get(author_id, {})
-        
+        author = tweet.get('author', {}) or {}
         if format_type == 'simple':
-            print(f"Tweet ID: {tweet['id']}")
-            print(f"Author: @{author.get('username', 'unknown')} ({author.get('name', 'Unknown')})")
-            print(f"Text: {tweet['text']}")
-            print(f"Created: {tweet.get('created_at', 'unknown')}")
+            print(f"Tweet ID: {tweet.get('id', 'unknown')}")
+            print(f"Author: @{author.get('userName', 'unknown')} ({author.get('name', 'Unknown')})")
+            print(f"Text: {tweet.get('text', '')}")
+            print(f"Created: {tweet.get('createdAt', 'unknown')}")
             print("-" * 50)
         else:  # detailed
-            print(f"Tweet ID: {tweet['id']}")
-            print(f"Author: @{author.get('username', 'unknown')} ({author.get('name', 'Unknown')})")
-            print(f"Text: {tweet['text']}")
-            print(f"Created: {tweet.get('created_at', 'unknown')}")
+            print(f"Tweet ID: {tweet.get('id', 'unknown')}")
+            print(f"Author: @{author.get('userName', 'unknown')} ({author.get('name', 'Unknown')})")
+            print(f"Text: {tweet.get('text', '')}")
+            print(f"Created: {tweet.get('createdAt', 'unknown')}")
             print(f"Language: {tweet.get('lang', 'unknown')}")
-            
-            if 'public_metrics' in tweet:
-                metrics = tweet['public_metrics']
-                print(f"Likes: {metrics.get('like_count', 0)}")
-                print(f"Retweets: {metrics.get('retweet_count', 0)}")
-                print(f"Replies: {metrics.get('reply_count', 0)}")
-                print(f"Quotes: {metrics.get('quote_count', 0)}")
-            
-            if author.get('verified'):
-                print("✓ Verified account")
-            
+            if tweet.get("url"):
+                print(f"URL: {tweet.get('url')}")
+
+            print(f"Likes: {tweet.get('likeCount', 0)}")
+            print(f"Retweets: {tweet.get('retweetCount', 0)}")
+            print(f"Replies: {tweet.get('replyCount', 0)}")
+            print(f"Quotes: {tweet.get('quoteCount', 0)}")
+            print(f"Views: {tweet.get('viewCount', 0)}")
+
+            if author.get("isBlueVerified"):
+                print("✓ Blue verified account")
+
             print("-" * 50)
 
 def format_users_output(data: dict, format_type: str):
     """Format and display user data"""
-    if 'data' not in data:
+    if 'users' not in data:
         print("No users found")
         return
-    
-    # Handle both single user and multiple users response
-    users = data['data']
+
+    users = data['users']
     if isinstance(users, dict):
-        users = [users]  # Convert single user to list for uniform handling
-    
-    # Get expanded tweet data if available
-    tweets = {}
-    if 'includes' in data and 'tweets' in data['includes']:
-        for tweet in data['includes']['tweets']:
-            tweets[tweet['id']] = tweet
-    
+        users = [users]
+
     for user in users:
         if format_type == 'simple':
-            print(f"User ID: {user['id']}")
-            print(f"Username: @{user['username']}")
-            print(f"Name: {user['name']}")
-            if 'description' in user:
+            print(f"User ID: {user.get('id', 'unknown')}")
+            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Name: {user.get('name', 'Unknown')}")
+            if user.get('description'):
                 print(f"Bio: {user.get('description', '')[:100]}...")
             print("-" * 50)
             
         elif format_type == 'detailed':
-            print(f"User ID: {user['id']}")
-            print(f"Username: @{user['username']}")
-            print(f"Name: {user['name']}")
-            
-            if 'description' in user:
-                print(f"Bio: {user['description']}")
-            
-            if 'created_at' in user:
-                print(f"Joined: {user['created_at']}")
-            
-            if 'location' in user:
-                print(f"Location: {user['location']}")
-            
-            if 'url' in user:
-                print(f"Website: {user['url']}")
-            
-            if 'public_metrics' in user:
-                metrics = user['public_metrics']
-                print(f"Followers: {metrics.get('followers_count', 0):,}")
-                print(f"Following: {metrics.get('following_count', 0):,}")
-                print(f"Tweets: {metrics.get('tweet_count', 0):,}")
-                print(f"Listed: {metrics.get('listed_count', 0):,}")
-            
-            if 'verified' in user and user['verified']:
-                print("✓ Verified account")
-            
-            if 'protected' in user and user['protected']:
-                print("🔒 Protected account")
-            
+            print(f"User ID: {user.get('id', 'unknown')}")
+            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Name: {user.get('name', 'Unknown')}")
+
+            if user.get('description'):
+                print(f"Bio: {user.get('description')}")
+
+            if user.get('createdAt'):
+                print(f"Joined: {user.get('createdAt')}")
+
+            if user.get('location'):
+                print(f"Location: {user.get('location')}")
+
+            if user.get('url'):
+                print(f"Profile URL: {user.get('url')}")
+
+            print(f"Followers: {user.get('followers', 0):,}")
+            print(f"Following: {user.get('following', 0):,}")
+            print(f"Tweets: {user.get('statusesCount', 0):,}")
+            print(f"Likes: {user.get('favouritesCount', 0):,}")
+            print(f"Media: {user.get('mediaCount', 0):,}")
+
+            if user.get('isBlueVerified'):
+                print("✓ Blue verified account")
+            if user.get('verifiedType'):
+                print(f"Verified type: {user.get('verifiedType')}")
+            if user.get('canDm') is True:
+                print("✓ DMs enabled")
+
             print("-" * 50)
             
         else:  # full
             print("=== User Profile ===")
-            print(f"User ID: {user['id']}")
-            print(f"Username: @{user['username']}")
-            print(f"Name: {user['name']}")
-            
-            if 'description' in user:
-                print(f"\nBio: {user['description']}")
-            
-            if 'created_at' in user:
-                print(f"\nAccount created: {user['created_at']}")
-            
-            if 'location' in user:
-                print(f"Location: {user['location']}")
-            
-            if 'url' in user:
-                print(f"Website: {user['url']}")
-            
-            if 'profile_image_url' in user:
-                print(f"Profile image: {user['profile_image_url']}")
-            
-            if 'profile_banner_url' in user:
-                print(f"Banner image: {user['profile_banner_url']}")
-            
-            if 'public_metrics' in user:
-                print("\n=== Metrics ===")
-                metrics = user['public_metrics']
-                print(f"Followers: {metrics.get('followers_count', 0):,}")
-                print(f"Following: {metrics.get('following_count', 0):,}")
-                print(f"Tweets: {metrics.get('tweet_count', 0):,}")
-                print(f"Listed: {metrics.get('listed_count', 0):,}")
-            
-            # Account status
+            print(f"User ID: {user.get('id', 'unknown')}")
+            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Name: {user.get('name', 'Unknown')}")
+
+            if user.get('description'):
+                print(f"\nBio: {user.get('description')}")
+
+            if user.get('createdAt'):
+                print(f"\nAccount created: {user.get('createdAt')}")
+
+            if user.get('location'):
+                print(f"Location: {user.get('location')}")
+
+            if user.get('url'):
+                print(f"Profile URL: {user.get('url')}")
+
+            if user.get('profilePicture'):
+                print(f"Profile image: {user.get('profilePicture')}")
+
+            if user.get('coverPicture'):
+                print(f"Banner image: {user.get('coverPicture')}")
+
+            print("\n=== Metrics ===")
+            print(f"Followers: {user.get('followers', 0):,}")
+            print(f"Following: {user.get('following', 0):,}")
+            print(f"Tweets: {user.get('statusesCount', 0):,}")
+            print(f"Likes: {user.get('favouritesCount', 0):,}")
+            print(f"Media: {user.get('mediaCount', 0):,}")
+
             status_items = []
-            if user.get('verified'):
-                status_items.append("✓ Verified")
-            if user.get('protected'):
-                status_items.append("🔒 Protected")
-            if user.get('is_identity_verified'):
-                status_items.append("🆔 Identity Verified")
-            
+            if user.get('isBlueVerified'):
+                status_items.append("✓ Blue verified")
+            if user.get('verifiedType'):
+                status_items.append(f"Verified type: {user.get('verifiedType')}")
+            if user.get('canDm') is True:
+                status_items.append("DMs enabled")
+            if user.get('isTranslator') is True:
+                status_items.append("Translator")
+
             if status_items:
                 print("\n=== Account Status ===")
                 print(" | ".join(status_items))
-            
-            # Show pinned tweet if expanded
-            if 'pinned_tweet_id' in user and user['pinned_tweet_id'] in tweets:
-                pinned = tweets[user['pinned_tweet_id']]
-                print("\n=== Pinned Tweet ===")
-                print(f"ID: {pinned['id']}")
-                print(f"Text: {pinned['text']}")
-                if 'created_at' in pinned:
-                    print(f"Posted: {pinned['created_at']}")
-            
-            # Show most recent tweet if expanded
-            if 'most_recent_tweet_id' in user and user['most_recent_tweet_id'] in tweets:
-                recent = tweets[user['most_recent_tweet_id']]
-                print("\n=== Most Recent Tweet ===")
-                print(f"ID: {recent['id']}")
-                print(f"Text: {recent['text']}")
-                if 'created_at' in recent:
-                    print(f"Posted: {recent['created_at']}")
-            
+
             print("=" * 50)
 
 if __name__ == "__main__":

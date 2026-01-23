@@ -1,13 +1,16 @@
 ## 概要
 
-Birdappは、X/Twitter APIを使ってツイートの投稿や管理を行うCLIです。
+日本語で応答して下さい。
+
+Birdappは、TwitterAPI.ioを使ってツイートの投稿や管理を行うCLIです。
 
 関連スクリプト:
 - `birdapp/main.py` (CLIエントリポイント)
 - `birdapp/__main__.py` (python -m 実行入口)
-- `birdapp/auth.py` (認証フロー)
-- `birdapp/oauth2.py` (OAuth2サポート)
+- `birdapp/twitterapi_io.py` (TwitterAPI.io APIクライアント)
 - `birdapp/tweet.py` (ツイート操作)
+- `birdapp/media.py` (メディアアップロード)
+- `birdapp/user.py` (ユーザー検索)
 - `birdapp/storage/importer.py` (アーカイブ取り込み)
 - `tests/` (pytestテスト)
 

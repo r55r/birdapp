@@ -1,6 +1,6 @@
-# Birdapp: Twitter/X CLIツール
+# Birdapp: TwitterAPI.io CLIツール
 
-コマンドラインからTwitter/Xにツイートを投稿するためのツールです。
+コマンドラインからTwitter/Xにツイートを投稿するためのツールです（TwitterAPI.ioを利用）。
 
 ## セットアップ
 
@@ -35,26 +35,34 @@ birdapp tweet --text "Hello world!"
 
 ## 設定
 
-### Twitter API認証情報の取得
+### TwitterAPI.io認証情報の取得
 
-CLIを使用する前に、Twitter APIの認証情報を設定する必要があります。そのためには、[Twitter/X開発者アカウントに登録](https://developer.twitter.com/)する必要があります。
-
-ダッシュボードでアプリケーションを作成する必要があります。アプリケーションに「読み取りと書き込み」権限があることを確認してください。開発者ダッシュボードのアプリケーションの「Keys and Tokens」セクションから、以下を生成します：
-
-- APIキー
-- APIシークレット
-- アクセストークン
-- アクセストークンシークレット
+CLIを使用する前に、TwitterAPI.ioのAPIキーを取得してください。ダッシュボードで確認できます。
 
 ### 認証情報の設定
 
 設定コマンドを実行して認証情報を設定します：
 
 ```bash
-birdapp auth config --oauth1 # または --oauth2
+birdapp auth config
 ```
 
-これにより、Twitter API認証情報の入力を求められ、`~/.config/birdapp/config.json` に安全に保存されます。
+これにより、TwitterAPI.io認証情報の入力を求められ、`~/.config/birdapp/config.json` に安全に保存されます。
+
+必要な項目:
+- APIキー
+- Proxy（必須）
+- Username / Email / Password
+- TOTP Secret（2FAを使う場合のみ）
+
+環境変数で上書き可能:
+- `TWITTERAPI_IO_API_KEY`
+- `TWITTERAPI_IO_PROXY`
+- `TWITTERAPI_IO_USERNAME`
+- `TWITTERAPI_IO_EMAIL`
+- `TWITTERAPI_IO_PASSWORD`
+- `TWITTERAPI_IO_TOTP_SECRET`
+- `TWITTERAPI_IO_LOGIN_COOKIE`
 
 現在の設定を確認するには（シークレットは表示されません）：
 
@@ -62,52 +70,18 @@ birdapp auth config --oauth1 # または --oauth2
 birdapp auth config --show
 ```
 
-### 認証フロー
+### ログイン（login_cookie取得）
 
-BirdappはOAuth1とOAuth2の両方をサポートしています。セキュリティ要件とXアプリの登録方法に基づいて選択してください。
-
-OAuth1:
-- 設定完了後、別途ログインステップは不要です。
-- アプリのキー/シークレットとユーザーアクセストークン/シークレットをローカルに保存します。
-- 設定はシングルアカウント（一度に1セットのトークン）です。
-
-OAuth2（PKCEを使用した認可コード）:
-- 別途ログインステップが必要です。
-- トークンはユーザーIDごとに保存されます（複数アカウント対応）。
-- `auth whoami` は `--user-id` が指定されない限り、最初に保存されたトークンをデフォルトで使用します。
-- `X_OAUTH2_CLIENT_SECRET` が設定されている場合、クライアントはコンフィデンシャルとして動作します。それ以外の場合は、パブリックPKCEを使用し、アプリシークレットの保存を避けます。どちらのフローでもユーザー体験は同じですが、アプリをコンフィデンシャルとして登録した場合は、コンフィデンシャルフローを使用する必要があるかもしれません。
-
-### OAuth2（ユーザーコンテキスト）
-
-OAuth2はPKCEを使用した認可コードを使用します。以下の環境変数を設定してください：
-
-- `X_OAUTH2_CLIENT_ID`
-- `X_OAUTH2_REDIRECT_URI`（アプリのコールバックURLと一致する必要があります）
-- `X_OAUTH2_SCOPES`（オプション、デフォルト: `tweet.read users.read offline.access`）
-- `X_OAUTH2_CLIENT_SECRET`（オプション、コンフィデンシャルクライアントの場合のみ）
-
-設定ワークフローで設定できます：
-
-```bash
-birdapp auth config --oauth2
-```
-
-認証してトークンを保存するには：
+ツイート投稿やメディア投稿には login_cookie が必要です。以下を実行して保存します：
 
 ```bash
 birdapp auth login
 ```
 
-トークンを確認するには：
+保存された login_cookie を使って投稿が行われます。ユーザー情報を確認する場合は：
 
 ```bash
 birdapp auth whoami
-```
-
-開発用フィクスチャのキャプチャ：
-
-```bash
-uv run tests/capture_oauth2_fixtures.py
 ```
 
 ## 使い方
@@ -117,6 +91,7 @@ uv run tests/capture_oauth2_fixtures.py
 ツイートを投稿するには：
 
 ```bash
+birdapp auth login
 birdapp tweet --text "ツイート内容をここに入力"
 ```
 
@@ -170,7 +145,7 @@ birdapp get 1234567890 --json
 birdapp user elonmusk
 birdapp user @nasa @spacex
 birdapp user 44196397 --by-id
-birdapp user elonmusk --format detailed --fields public_metrics created_at
+birdapp user elonmusk --format detailed
 ```
 
 ### Twitter Community Archiveからのツイートのインポート
