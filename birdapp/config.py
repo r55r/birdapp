@@ -51,31 +51,18 @@ def prompt_for_credentials() -> None:
     credentials = load_config()
 
     credentials["TWITTERAPI_IO_API_KEY"] = getpass.getpass("API Key: ").strip()
-    credentials["TWITTERAPI_IO_PROXY"] = getpass.getpass("Proxy (required): ").strip()
-    credentials["TWITTERAPI_IO_USERNAME"] = input("Username (without @): ").strip()
-    credentials["TWITTERAPI_IO_EMAIL"] = input("Email: ").strip()
-    credentials["TWITTERAPI_IO_PASSWORD"] = getpass.getpass("Password: ").strip()
-    totp_secret = getpass.getpass("TOTP Secret (optional): ").strip()
-    if totp_secret:
-        credentials["TWITTERAPI_IO_TOTP_SECRET"] = totp_secret
+    username = input("Username (optional, without @): ").strip()
+    if username:
+        credentials["TWITTERAPI_IO_USERNAME"] = username
 
-    required_keys = (
-        "TWITTERAPI_IO_API_KEY",
-        "TWITTERAPI_IO_PROXY",
-        "TWITTERAPI_IO_USERNAME",
-        "TWITTERAPI_IO_EMAIL",
-        "TWITTERAPI_IO_PASSWORD",
-    )
-    missing = [key for key in required_keys if not credentials.get(key)]
-    if missing:
-        print(f"\nError: Missing required fields: {', '.join(missing)}")
+    if not credentials.get("TWITTERAPI_IO_API_KEY"):
+        print("\nError: Missing required field: TWITTERAPI_IO_API_KEY")
         return
 
     try:
         save_config(credentials)
         config_path = get_config_path()
         print(f"\n✅ Configuration saved to {config_path}")
-        print("Next, run `birdapp auth login` to obtain a login cookie.")
     except RuntimeError as e:
         print(f"\n❌ {e}")
 
@@ -88,9 +75,4 @@ def show_config() -> None:
 
     print("Current configuration:")
     print("  API Key: " + ("Set" if config.get("TWITTERAPI_IO_API_KEY") else "Not set"))
-    print("  Proxy: " + ("Set" if config.get("TWITTERAPI_IO_PROXY") else "Not set"))
     print("  Username: " + (config.get("TWITTERAPI_IO_USERNAME") or "Not set"))
-    print("  Email: " + ("Set" if config.get("TWITTERAPI_IO_EMAIL") else "Not set"))
-    print("  Password: " + ("Set" if config.get("TWITTERAPI_IO_PASSWORD") else "Not set"))
-    print("  TOTP Secret: " + ("Set" if config.get("TWITTERAPI_IO_TOTP_SECRET") else "Not set"))
-    print("  Login Cookie: " + ("Set" if config.get("TWITTERAPI_IO_LOGIN_COOKIE") else "Not set"))

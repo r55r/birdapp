@@ -24,44 +24,6 @@ class TestAuthCli(unittest.TestCase):
 
         show_config.assert_called_once()
 
-    def test_auth_login_requires_config(self) -> None:
-        def fake_get_credential(_: str) -> str | None:
-            return None
-
-        with (
-            mock.patch.object(sys, "argv", ["birdapp", "auth", "login"]),
-            mock.patch("birdapp.main.get_credential", side_effect=fake_get_credential),
-            mock.patch("birdapp.main.login_user") as login_user,
-            mock.patch("builtins.print") as print_mock,
-        ):
-            main_module.main()
-
-        login_user.assert_not_called()
-        printed = " ".join(" ".join(map(str, args)) for args, _ in print_mock.call_args_list)
-        self.assertIn("TwitterAPI.io credentials are not configured", printed)
-
-    def test_auth_login_runs_login(self) -> None:
-        def fake_get_credential(key: str) -> str | None:
-            required = {
-                "TWITTERAPI_IO_API_KEY",
-                "TWITTERAPI_IO_USERNAME",
-                "TWITTERAPI_IO_EMAIL",
-                "TWITTERAPI_IO_PASSWORD",
-                "TWITTERAPI_IO_PROXY",
-            }
-            if key in required:
-                return "value"
-            return None
-
-        with (
-            mock.patch.object(sys, "argv", ["birdapp", "auth", "login"]),
-            mock.patch("birdapp.main.get_credential", side_effect=fake_get_credential),
-            mock.patch("birdapp.main.login_user", return_value={"status": "success"}) as login_user,
-        ):
-            main_module.main()
-
-        login_user.assert_called_once()
-
     def test_auth_whoami_calls_user_lookup(self) -> None:
         with (
             mock.patch.object(sys, "argv", ["birdapp", "auth", "whoami"]),

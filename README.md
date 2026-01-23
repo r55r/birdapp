@@ -1,6 +1,6 @@
 # Birdapp: TwitterAPI.io CLIツール
 
-コマンドラインからTwitter/Xにツイートを投稿するためのツールです（TwitterAPI.ioを利用）。
+コマンドラインからTwitter/Xのツイート取得やユーザー検索、アーカイブ取り込みを行うツールです（TwitterAPI.ioを利用）。
 
 ## セットアップ
 
@@ -30,7 +30,7 @@ uv tool install -U git+https://github.com/Promptly-Technologies-LLC/birdapp.git
 
 ```bash
 birdapp auth config
-birdapp tweet --text "Hello world!"
+birdapp get 1234567890
 ```
 
 ## 設定
@@ -51,18 +51,13 @@ birdapp auth config
 
 必要な項目:
 - APIキー
-- Proxy（必須）
-- Username / Email / Password
-- TOTP Secret（2FAを使う場合のみ）
+
+任意:
+- Username（auth whoami の既定値）
 
 環境変数で上書き可能:
 - `TWITTERAPI_IO_API_KEY`
-- `TWITTERAPI_IO_PROXY`
 - `TWITTERAPI_IO_USERNAME`
-- `TWITTERAPI_IO_EMAIL`
-- `TWITTERAPI_IO_PASSWORD`
-- `TWITTERAPI_IO_TOTP_SECRET`
-- `TWITTERAPI_IO_LOGIN_COOKIE`
 
 現在の設定を確認するには（シークレットは表示されません）：
 
@@ -70,62 +65,7 @@ birdapp auth config
 birdapp auth config --show
 ```
 
-### ログイン（login_cookie取得）
-
-ツイート投稿やメディア投稿には login_cookie が必要です。以下を実行して保存します：
-
-```bash
-birdapp auth login
-```
-
-保存された login_cookie を使って投稿が行われます。ユーザー情報を確認する場合は：
-
-```bash
-birdapp auth whoami
-```
-
 ## 使い方
-
-### ツイートの投稿
-
-ツイートを投稿するには：
-
-```bash
-birdapp auth login
-birdapp tweet --text "ツイート内容をここに入力"
-```
-
-メディア付きでツイートを投稿するには：
-
-```bash
-birdapp tweet --text "この画像をチェック！" --media /path/to/image.jpg
-```
-
-メディアのみのツイート（テキストなし）を投稿するには：
-
-```bash
-birdapp tweet --media /path/to/image.jpg
-```
-
-### ツイートへの返信
-
-ツイートIDを使用して返信するには：
-
-```bash
-birdapp tweet --text "いいポイントですね！" --reply-to 1234567890
-```
-
-ツイートURLを使用して返信するには：
-
-```bash
-birdapp tweet --text "同意します！" --reply-to "https://x.com/user/status/1234567890"
-```
-
-返信にメディアを含めることもできます：
-
-```bash
-birdapp tweet --text "これが私の返信です" --media /path/to/image.jpg --reply-to 1234567890
-```
 
 ### ツイートの取得
 
@@ -173,8 +113,8 @@ birdapp --help
 特定のコマンドのヘルプを確認するには：
 
 ```bash
-birdapp tweet --help
 birdapp auth --help
 birdapp get --help
 birdapp user --help
+birdapp import-archive --help
 ```

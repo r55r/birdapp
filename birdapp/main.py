@@ -1,13 +1,12 @@
 import argparse
 import json
 
-from .tweet import post_tweet, get_tweets_by_ids
+from .tweet import get_tweets_by_ids
 from .config import (
     get_credential,
     prompt_for_credentials,
     show_config,
 )
-from .twitterapi_io import login_user
 from .storage.importer import import_archive
 from .user import (
     get_user_by_id, get_users_by_ids,
@@ -15,13 +14,9 @@ from .user import (
 )
 
 
-def _has_required_credentials(keys: tuple[str, ...]) -> bool:
-    return all(get_credential(key) for key in keys)
-
-
 def main() -> None:
     """Main CLI entry point"""
-    parser = argparse.ArgumentParser(description="TwitterAPI.io CLI - Post tweets from the command line")
+    parser = argparse.ArgumentParser(description="TwitterAPI.io CLI - Manage and query Twitter data from the command line")
     subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
 
     # Auth subcommand
@@ -31,18 +26,9 @@ def main() -> None:
     auth_config_parser = auth_subparsers.add_parser("config", help="Configure authentication")
     auth_config_parser.add_argument("--show", action="store_true", help="Show current configuration")
 
-    auth_login_parser = auth_subparsers.add_parser("login", help="Authenticate via TwitterAPI.io login_v2")
-    auth_login_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
-
     auth_whoami_parser = auth_subparsers.add_parser("whoami", help="Show configured user info")
     auth_whoami_parser.add_argument("--username", type=str, help="Override username")
     auth_whoami_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
-
-    # Tweet subcommand
-    tweet_parser = subparsers.add_parser('tweet', help='Post a tweet')
-    tweet_parser.add_argument('--text', type=str, help='Tweet text to post (optional if media provided)', default="")
-    tweet_parser.add_argument('--media', type=str, help='Path to media file (optional)')
-    tweet_parser.add_argument('--reply-to', dest='reply_to', type=str, help='Tweet ID or URL to reply to (optional)')
     
     # Get tweets subcommand
     get_parser = subparsers.add_parser('get', help='Get tweets by ID')
@@ -96,27 +82,7 @@ def main() -> None:
                 show_config()
             else:
                 prompt_for_credentials()
-        elif args.auth_command == "login":
-            required_keys = (
-                "TWITTERAPI_IO_API_KEY",
-                "TWITTERAPI_IO_USERNAME",
-                "TWITTERAPI_IO_EMAIL",
-                "TWITTERAPI_IO_PASSWORD",
-                "TWITTERAPI_IO_PROXY",
-            )
-            if not _has_required_credentials(required_keys):
-                print("TwitterAPI.io credentials are not configured. Run `birdapp auth config`.")
-                return
-
-            try:
-                result = login_user()
-                if args.json:
-                    print(json.dumps(result, indent=2))
-                else:
-                    print("✅ Login successful. Login cookie saved.")
-            except Exception as e:
-                print(f"❌ Error during login: {str(e)}")
-        else:
+        elif args.auth_command == "whoami":
             username = args.username or get_credential("TWITTERAPI_IO_USERNAME")
             if not username:
                 print("No username configured. Run `birdapp auth config` or pass --username.")
@@ -134,30 +100,9 @@ def main() -> None:
                         print(f"❌ Failed to get user info: {result}")
             except Exception as e:
                 print(f"❌ Error getting user info: {str(e)}")
+        else:
+            print("Unknown auth command")
         return
-    
-    # Handle tweet command
-    if args.command == 'tweet':
-        # Validate arguments
-        if not args.text.strip() and not args.media:
-            print("Error: Cannot post empty tweet without media")
-            exit(1)
-        
-        # Post the tweet
-        try:
-            success, message = post_tweet(
-                text=args.text,
-                media_path=args.media,
-                reply_to=args.reply_to
-            )
-            
-            if success:
-                print(f"✅ Successfully posted tweet: {message}")
-            else:
-                print(f"❌ Failed to post tweet: {message}")
-                
-        except Exception as e:
-            print(f"❌ Error posting tweet: {str(e)}")
     
     # Handle get command
     if args.command == 'get':
