@@ -13,7 +13,7 @@ DEFAULT_TIMEOUT = 30
 def require_credential(key: str) -> str:
     value = get_credential(key)
     if not value:
-        raise ValueError(f"Missing required credential: {key}. Run `birdapp auth config`.")
+        raise ValueError(f"必須の認証情報がありません: {key}。`birdapp auth config` を実行してください。")
     return value
 
 

@@ -17,71 +17,64 @@ from .read_api import execute_read_command, register_read_subcommands
 
 def main() -> None:
     """Main CLI entry point"""
-    parser = argparse.ArgumentParser(description="TwitterAPI.io CLI - Manage and query Twitter data from the command line")
-    subparsers = parser.add_subparsers(dest="command", help="Available commands", required=True)
+    parser = argparse.ArgumentParser(description="TwitterAPI.io CLI - Twitterデータの管理とクエリ")
+    subparsers = parser.add_subparsers(dest="command", help="利用可能なコマンド", required=True)
 
-    # Auth subcommand
-    auth_parser = subparsers.add_parser("auth", help="Authentication and credential management")
+    auth_parser = subparsers.add_parser("auth", help="認証と資格情報の管理")
     auth_subparsers = auth_parser.add_subparsers(dest="auth_command", required=True)
 
-    auth_config_parser = auth_subparsers.add_parser("config", help="Configure authentication")
-    auth_config_parser.add_argument("--show", action="store_true", help="Show current configuration")
+    auth_config_parser = auth_subparsers.add_parser("config", help="認証の設定")
+    auth_config_parser.add_argument("--show", action="store_true", help="現在の設定を表示")
 
-    auth_whoami_parser = auth_subparsers.add_parser("whoami", help="Show configured user info")
-    auth_whoami_parser.add_argument("--username", type=str, help="Override username")
-    auth_whoami_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
+    auth_whoami_parser = auth_subparsers.add_parser("whoami", help="設定済みユーザー情報を表示")
+    auth_whoami_parser.add_argument("--username", type=str, help="ユーザー名を上書き")
+    auth_whoami_parser.add_argument("--json", action="store_true", help="JSON形式で出力")
     
-    # Get tweets subcommand
-    get_parser = subparsers.add_parser('get', help='Get tweets by ID')
-    get_parser.add_argument('ids', nargs='+', help='Tweet IDs to retrieve (space separated)')
-    get_parser.add_argument('--json', action='store_true', help='Output raw JSON response')
-    get_parser.add_argument('--format', choices=['simple', 'detailed'], default='simple', 
-                           help='Output format (simple or detailed)')
+    get_parser = subparsers.add_parser('get', help='IDでツイートを取得')
+    get_parser.add_argument('ids', nargs='+', help='取得するツイートID（スペース区切り）')
+    get_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+    get_parser.add_argument('--format', choices=['simple', 'detailed'], default='simple',
+                           help='出力形式（simple または detailed）')
     
-    # User lookup subcommand
-    user_parser = subparsers.add_parser('user', help='Look up user information')
-    user_parser.add_argument('identifiers', nargs='+', 
-                            help='User IDs or usernames to look up (usernames can have @ prefix)')
-    user_parser.add_argument('--by-id', action='store_true', 
-                            help='Force lookup by ID (default: auto-detect based on format)')
-    user_parser.add_argument('--by-username', action='store_true', 
-                            help='Force lookup by username (default: auto-detect based on format)')
-    user_parser.add_argument('--json', action='store_true', 
-                            help='Output raw JSON response')
+    user_parser = subparsers.add_parser('user', help='ユーザー情報を検索')
+    user_parser.add_argument('identifiers', nargs='+',
+                            help='検索するユーザーIDまたはユーザー名（@付き可）')
+    user_parser.add_argument('--by-id', action='store_true',
+                            help='IDで検索（デフォルト: 形式から自動判定）')
+    user_parser.add_argument('--by-username', action='store_true',
+                            help='ユーザー名で検索（デフォルト: 形式から自動判定）')
+    user_parser.add_argument('--json', action='store_true',
+                            help='JSON形式で出力')
     user_parser.add_argument('--format', choices=['simple', 'detailed', 'full'], default='simple',
-                            help='Output format (simple, detailed, or full)')
+                            help='出力形式（simple, detailed, full）')
 
-    # Import archive subcommand
     import_parser = subparsers.add_parser(
         'import-archive',
-        help='Import a Twitter Community Archive into a SQLite database',
+        help='Twitter Community ArchiveをSQLiteデータベースにインポート',
     )
-    import_parser.add_argument('--username', type=str, help='Archive username')
-    import_parser.add_argument('--url', type=str, help='Full archive.json URL')
-    import_parser.add_argument('--path', type=str, help='Path to a local archive.json file')
+    import_parser.add_argument('--username', type=str, help='アーカイブのユーザー名')
+    import_parser.add_argument('--url', type=str, help='archive.jsonの完全なURL')
+    import_parser.add_argument('--path', type=str, help='ローカルのarchive.jsonファイルパス')
     import_parser.add_argument(
         '--db',
         type=str,
         default=None,
-        help='Database URL (default: ~/.local/share/birdapp/birdapp.db)',
+        help='データベースURL（デフォルト: ~/.local/share/birdapp/birdapp.db）',
     )
     import_parser.add_argument(
         '--batch-size',
         type=int,
         default=1000,
-        help='Batch size for inserts (default: 1000)',
+        help='一括挿入のバッチサイズ（デフォルト: 1000）',
     )
-    import_parser.add_argument('--json', action='store_true', help='Output raw JSON result')
+    import_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
 
-    # Read-only endpoints subcommand
-    read_parser = subparsers.add_parser('read', help='Read data via TwitterAPI.io GET endpoints')
+    read_parser = subparsers.add_parser('read', help='TwitterAPI.io GETエンドポイントでデータを取得')
     read_subparsers = read_parser.add_subparsers(dest='read_command', required=True)
     register_read_subcommands(read_subparsers)
     
-    # Parse arguments
     args = parser.parse_args()
     
-    # Handle auth command
     if args.command == "auth":
         if args.auth_command == "config":
             if args.show:
@@ -91,26 +84,25 @@ def main() -> None:
         elif args.auth_command == "whoami":
             username = args.username or get_credential("TWITTERAPI_IO_USERNAME")
             if not username:
-                print("No username configured. Run `birdapp auth config` or pass --username.")
+                print("ユーザー名が未設定です。`birdapp auth config` を実行するか --username を指定してください。")
                 return
             try:
                 success, result = get_user_by_username(username)
                 if not success:
-                    print(f"❌ Failed to get user info: {result}")
+                    print(f"❌ ユーザー情報の取得に失敗: {result}")
                 elif args.json:
                     print(json.dumps(result, indent=2))
                 else:
                     if isinstance(result, dict):
                         format_users_output(result, "full")
                     else:
-                        print(f"❌ Failed to get user info: {result}")
+                        print(f"❌ ユーザー情報の取得に失敗: {result}")
             except Exception as e:
-                print(f"❌ Error getting user info: {str(e)}")
+                print(f"❌ ユーザー情報取得エラー: {str(e)}")
         else:
-            print("Unknown auth command")
+            print("不明な認証コマンドです")
         return
     
-    # Handle get command
     if args.command == 'get':
         try:
             success, result = get_tweets_by_ids(args.ids)
@@ -122,39 +114,27 @@ def main() -> None:
                     if isinstance(result, dict):
                         format_tweets_output(result, args.format)
                     else:
-                        print(f"❌ Failed to get tweets: {result}")
+                        print(f"❌ ツイートの取得に失敗: {result}")
             else:
-                print(f"❌ Failed to get tweets: {result}")
+                print(f"❌ ツイートの取得に失敗: {result}")
                 
         except Exception as e:
-            print(f"❌ Error getting tweets: {str(e)}")
+            print(f"❌ ツイート取得エラー: {str(e)}")
     
-    # Handle user command
     if args.command == 'user':
         try:
-            # Determine if we're looking up by ID or username
             identifiers = args.identifiers
-            
-            # Auto-detect type if not forced
-            if not args.by_id and not args.by_username:
-                # Check if all identifiers look like IDs (all digits) or usernames
-                all_digits = all(ident.isdigit() for ident in identifiers)
-                if all_digits:
-                    by_id = True
-                else:
-                    by_id = False
-            else:
+            if args.by_id or args.by_username:
                 by_id = args.by_id
-            
-            # Perform the lookup
+            else:
+                by_id = all(ident.isdigit() for ident in identifiers)
+
             if len(identifiers) == 1:
-                # Single user lookup
                 if by_id:
                     success, result = get_user_by_id(identifiers[0])
                 else:
                     success, result = get_user_by_username(identifiers[0])
             else:
-                # Multiple users lookup
                 if by_id:
                     success, result = get_users_by_ids(identifiers)
                 else:
@@ -167,14 +147,13 @@ def main() -> None:
                     if isinstance(result, dict):
                         format_users_output(result, args.format)
                     else:
-                        print(f"❌ Failed to get user(s): {result}")
+                        print(f"❌ ユーザーの取得に失敗: {result}")
             else:
-                print(f"❌ Failed to get user(s): {result}")
+                print(f"❌ ユーザーの取得に失敗: {result}")
                 
         except Exception as e:
-            print(f"❌ Error getting user(s): {str(e)}")
+            print(f"❌ ユーザー取得エラー: {str(e)}")
 
-    # Handle import-archive command
     if args.command == 'import-archive':
         try:
             username = args.username
@@ -191,13 +170,12 @@ def main() -> None:
                 print(json.dumps(result, indent=2))
             else:
                 total = sum(result.values())
-                print(f"✅ Imported {total} rows")
+                print(f"✅ {total} 件インポートしました")
                 for key, value in result.items():
                     print(f"{key}: {value}")
         except Exception as e:
-            print(f"❌ Error importing archive: {str(e)}")
+            print(f"❌ アーカイブインポートエラー: {str(e)}")
 
-    # Handle read command
     if args.command == 'read':
         try:
             success, result = execute_read_command(args)
@@ -207,45 +185,38 @@ def main() -> None:
                 else:
                     print(json.dumps(result, indent=2))
             else:
-                print(f"❌ Failed to get data: {result}")
+                print(f"❌ データの取得に失敗: {result}")
         except Exception as e:
-            print(f"❌ Error getting data: {str(e)}")
+            print(f"❌ データ取得エラー: {str(e)}")
 
 def format_tweets_output(data: dict, format_type: str):
     """Format and display tweet data"""
     if 'tweets' not in data:
-        print("No tweets found")
+        print("ツイートが見つかりません")
         return
 
     tweets = data['tweets']
 
     for tweet in tweets:
         author = tweet.get('author', {}) or {}
-        if format_type == 'simple':
-            print(f"Tweet ID: {tweet.get('id', 'unknown')}")
-            print(f"Author: @{author.get('userName', 'unknown')} ({author.get('name', 'Unknown')})")
-            print(f"Text: {tweet.get('text', '')}")
-            print(f"Created: {tweet.get('createdAt', 'unknown')}")
-            print("-" * 50)
-        else:  # detailed
-            print(f"Tweet ID: {tweet.get('id', 'unknown')}")
-            print(f"Author: @{author.get('userName', 'unknown')} ({author.get('name', 'Unknown')})")
-            print(f"Text: {tweet.get('text', '')}")
-            print(f"Created: {tweet.get('createdAt', 'unknown')}")
-            print(f"Language: {tweet.get('lang', 'unknown')}")
+        print(f"ツイートID: {tweet.get('id', '不明')}")
+        print(f"投稿者: @{author.get('userName', '不明')} ({author.get('name', '不明')})")
+        print(f"本文: {tweet.get('text', '')}")
+        print(f"投稿日時: {tweet.get('createdAt', '不明')}")
+
+        if format_type == 'detailed':
+            print(f"言語: {tweet.get('lang', '不明')}")
             if tweet.get("url"):
                 print(f"URL: {tweet.get('url')}")
-
-            print(f"Likes: {tweet.get('likeCount', 0)}")
-            print(f"Retweets: {tweet.get('retweetCount', 0)}")
-            print(f"Replies: {tweet.get('replyCount', 0)}")
-            print(f"Quotes: {tweet.get('quoteCount', 0)}")
-            print(f"Views: {tweet.get('viewCount', 0)}")
-
+            print(f"いいね: {tweet.get('likeCount', 0)}")
+            print(f"リツイート: {tweet.get('retweetCount', 0)}")
+            print(f"リプライ: {tweet.get('replyCount', 0)}")
+            print(f"引用: {tweet.get('quoteCount', 0)}")
+            print(f"表示回数: {tweet.get('viewCount', 0)}")
             if author.get("isBlueVerified"):
-                print("✓ Blue verified account")
+                print("✓ Blue認証済みアカウント")
 
-            print("-" * 50)
+        print("-" * 50)
 
 def _user_field(user: dict, *keys: str, default: object = None) -> object:
     """Get a field from user dict, trying multiple key names."""
@@ -259,7 +230,7 @@ def _user_field(user: dict, *keys: str, default: object = None) -> object:
 def format_users_output(data: dict, format_type: str):
     """Format and display user data"""
     if 'users' not in data:
-        print("No users found")
+        print("ユーザーが見つかりません")
         return
 
     users = data['users']
@@ -267,7 +238,7 @@ def format_users_output(data: dict, format_type: str):
         users = [users]
 
     for user in users:
-        username = _user_field(user, 'screen_name', 'userName', default='unknown')
+        username = _user_field(user, 'screen_name', 'userName', default='不明')
         followers = _user_field(user, 'followers_count', 'followers', default=0)
         following = _user_field(user, 'following_count', 'friends_count', 'following', default=0)
         tweets = _user_field(user, 'statuses_count', 'statusesCount', default=0)
@@ -279,88 +250,88 @@ def format_users_output(data: dict, format_type: str):
         can_dm = _user_field(user, 'can_dm', 'canDm')
 
         if format_type == 'simple':
-            print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{username}")
-            print(f"Name: {user.get('name', 'Unknown')}")
+            print(f"ユーザーID: {user.get('id', '不明')}")
+            print(f"ユーザー名: @{username}")
+            print(f"表示名: {user.get('name', '不明')}")
             if user.get('description'):
-                print(f"Bio: {user.get('description', '')[:100]}...")
+                print(f"自己紹介: {user.get('description', '')[:100]}...")
             print("-" * 50)
 
         elif format_type == 'detailed':
-            print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{username}")
-            print(f"Name: {user.get('name', 'Unknown')}")
+            print(f"ユーザーID: {user.get('id', '不明')}")
+            print(f"ユーザー名: @{username}")
+            print(f"表示名: {user.get('name', '不明')}")
 
             if user.get('description'):
-                print(f"Bio: {user.get('description')}")
+                print(f"自己紹介: {user.get('description')}")
 
             if created:
-                print(f"Joined: {created}")
+                print(f"登録日: {created}")
 
             if user.get('location'):
-                print(f"Location: {user.get('location')}")
+                print(f"場所: {user.get('location')}")
 
             if user.get('url'):
-                print(f"Profile URL: {user.get('url')}")
+                print(f"プロフィールURL: {user.get('url')}")
 
-            print(f"Followers: {followers:,}")
-            print(f"Following: {following:,}")
-            print(f"Tweets: {tweets:,}")
-            print(f"Likes: {likes:,}")
-            print(f"Media: {media:,}")
+            print(f"フォロワー: {followers:,}")
+            print(f"フォロー中: {following:,}")
+            print(f"ツイート数: {tweets:,}")
+            print(f"いいね数: {likes:,}")
+            print(f"メディア数: {media:,}")
 
             if user.get('isBlueVerified'):
-                print("✓ Blue verified account")
+                print("✓ Blue認証済みアカウント")
             if user.get('verifiedType'):
-                print(f"Verified type: {user.get('verifiedType')}")
+                print(f"認証種別: {user.get('verifiedType')}")
             if can_dm is True:
-                print("✓ DMs enabled")
+                print("✓ DM受付中")
 
             print("-" * 50)
 
         else:  # full
-            print("=== User Profile ===")
-            print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{username}")
-            print(f"Name: {user.get('name', 'Unknown')}")
+            print("=== ユーザープロフィール ===")
+            print(f"ユーザーID: {user.get('id', '不明')}")
+            print(f"ユーザー名: @{username}")
+            print(f"表示名: {user.get('name', '不明')}")
 
             if user.get('description'):
-                print(f"\nBio: {user.get('description')}")
+                print(f"\n自己紹介: {user.get('description')}")
 
             if created:
-                print(f"\nAccount created: {created}")
+                print(f"\nアカウント作成日: {created}")
 
             if user.get('location'):
-                print(f"Location: {user.get('location')}")
+                print(f"場所: {user.get('location')}")
 
             if user.get('url'):
-                print(f"Profile URL: {user.get('url')}")
+                print(f"プロフィールURL: {user.get('url')}")
 
             if profile_img:
-                print(f"Profile image: {profile_img}")
+                print(f"プロフィール画像: {profile_img}")
 
             if banner_img:
-                print(f"Banner image: {banner_img}")
+                print(f"バナー画像: {banner_img}")
 
-            print("\n=== Metrics ===")
-            print(f"Followers: {followers:,}")
-            print(f"Following: {following:,}")
-            print(f"Tweets: {tweets:,}")
-            print(f"Likes: {likes:,}")
-            print(f"Media: {media:,}")
+            print("\n=== 統計情報 ===")
+            print(f"フォロワー: {followers:,}")
+            print(f"フォロー中: {following:,}")
+            print(f"ツイート数: {tweets:,}")
+            print(f"いいね数: {likes:,}")
+            print(f"メディア数: {media:,}")
 
             status_items = []
             if user.get('isBlueVerified'):
-                status_items.append("✓ Blue verified")
+                status_items.append("✓ Blue認証済み")
             if user.get('verifiedType'):
-                status_items.append(f"Verified type: {user.get('verifiedType')}")
+                status_items.append(f"認証種別: {user.get('verifiedType')}")
             if can_dm is True:
-                status_items.append("DMs enabled")
+                status_items.append("DM受付中")
             if user.get('isTranslator') is True:
-                status_items.append("Translator")
+                status_items.append("翻訳者")
 
             if status_items:
-                print("\n=== Account Status ===")
+                print("\n=== アカウントステータス ===")
                 print(" | ".join(status_items))
 
             print("=" * 50)

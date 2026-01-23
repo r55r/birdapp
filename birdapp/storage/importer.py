@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Iterable, Optional, Sequence, TypeVar
+from typing import Any, Iterable, Sequence, TypeVar
 
 import requests
 from sqlmodel import Session, select
@@ -48,7 +48,7 @@ def load_archive(path: str | Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def _safe_int(value: Any) -> Optional[int]:
+def _safe_int(value: Any) -> int | None:
     if value is None:
         return None
     if isinstance(value, int):
@@ -61,7 +61,14 @@ def _safe_int(value: Any) -> Optional[int]:
     return None
 
 
-def _indices_to_bounds(indices: Iterable[Any]) -> tuple[Optional[int], Optional[int]]:
+def _optional_str(value: Any) -> str | None:
+    """Convert value to str if not None, otherwise return None."""
+    if value is None:
+        return None
+    return str(value)
+
+
+def _indices_to_bounds(indices: Iterable[Any]) -> tuple[int | None, int | None]:
     items = list(indices)
     if len(items) != 2:
         return None, None
@@ -200,31 +207,11 @@ def import_archive_data(
                         if display_text_range is not None
                         else None
                     ),
-                    in_reply_to_status_id=(
-                        str(tweet.get("in_reply_to_status_id"))
-                        if tweet.get("in_reply_to_status_id") is not None
-                        else None
-                    ),
-                    in_reply_to_status_id_str=(
-                        str(tweet.get("in_reply_to_status_id_str"))
-                        if tweet.get("in_reply_to_status_id_str") is not None
-                        else None
-                    ),
-                    in_reply_to_user_id=(
-                        str(tweet.get("in_reply_to_user_id"))
-                        if tweet.get("in_reply_to_user_id") is not None
-                        else None
-                    ),
-                    in_reply_to_user_id_str=(
-                        str(tweet.get("in_reply_to_user_id_str"))
-                        if tweet.get("in_reply_to_user_id_str") is not None
-                        else None
-                    ),
-                    in_reply_to_screen_name=(
-                        str(tweet.get("in_reply_to_screen_name"))
-                        if tweet.get("in_reply_to_screen_name") is not None
-                        else None
-                    ),
+                    in_reply_to_status_id=_optional_str(tweet.get("in_reply_to_status_id")),
+                    in_reply_to_status_id_str=_optional_str(tweet.get("in_reply_to_status_id_str")),
+                    in_reply_to_user_id=_optional_str(tweet.get("in_reply_to_user_id")),
+                    in_reply_to_user_id_str=_optional_str(tweet.get("in_reply_to_user_id_str")),
+                    in_reply_to_screen_name=_optional_str(tweet.get("in_reply_to_screen_name")),
                     possibly_sensitive=(
                         bool(tweet.get("possibly_sensitive"))
                         if tweet.get("possibly_sensitive") is not None
@@ -251,31 +238,11 @@ def import_archive_data(
                 if display_text_range is not None
                 else None
             )
-            existing.in_reply_to_status_id = (
-                str(tweet.get("in_reply_to_status_id"))
-                if tweet.get("in_reply_to_status_id") is not None
-                else None
-            )
-            existing.in_reply_to_status_id_str = (
-                str(tweet.get("in_reply_to_status_id_str"))
-                if tweet.get("in_reply_to_status_id_str") is not None
-                else None
-            )
-            existing.in_reply_to_user_id = (
-                str(tweet.get("in_reply_to_user_id"))
-                if tweet.get("in_reply_to_user_id") is not None
-                else None
-            )
-            existing.in_reply_to_user_id_str = (
-                str(tweet.get("in_reply_to_user_id_str"))
-                if tweet.get("in_reply_to_user_id_str") is not None
-                else None
-            )
-            existing.in_reply_to_screen_name = (
-                str(tweet.get("in_reply_to_screen_name"))
-                if tweet.get("in_reply_to_screen_name") is not None
-                else None
-            )
+            existing.in_reply_to_status_id = _optional_str(tweet.get("in_reply_to_status_id"))
+            existing.in_reply_to_status_id_str = _optional_str(tweet.get("in_reply_to_status_id_str"))
+            existing.in_reply_to_user_id = _optional_str(tweet.get("in_reply_to_user_id"))
+            existing.in_reply_to_user_id_str = _optional_str(tweet.get("in_reply_to_user_id_str"))
+            existing.in_reply_to_screen_name = _optional_str(tweet.get("in_reply_to_screen_name"))
             existing.possibly_sensitive = (
                 bool(tweet.get("possibly_sensitive"))
                 if tweet.get("possibly_sensitive") is not None
@@ -409,26 +376,10 @@ def import_archive_data(
                         media_url=str(media.get("media_url", "")),
                         media_url_https=str(media.get("media_url_https", "")),
                         sizes=media.get("sizes"),
-                        source_status_id=(
-                            str(media.get("source_status_id"))
-                            if media.get("source_status_id") is not None
-                            else None
-                        ),
-                        source_status_id_str=(
-                            str(media.get("source_status_id_str"))
-                            if media.get("source_status_id_str") is not None
-                            else None
-                        ),
-                        source_user_id=(
-                            str(media.get("source_user_id"))
-                            if media.get("source_user_id") is not None
-                            else None
-                        ),
-                        source_user_id_str=(
-                            str(media.get("source_user_id_str"))
-                            if media.get("source_user_id_str") is not None
-                            else None
-                        ),
+                        source_status_id=_optional_str(media.get("source_status_id")),
+                        source_status_id_str=_optional_str(media.get("source_status_id_str")),
+                        source_user_id=_optional_str(media.get("source_user_id")),
+                        source_user_id_str=_optional_str(media.get("source_user_id_str")),
                     )
                 )
                 counts["tweet_media"] += 1
@@ -463,26 +414,10 @@ def import_archive_data(
                         sizes=media.get("sizes"),
                         video_info=media.get("video_info"),
                         additional_media_info=media.get("additional_media_info"),
-                        source_status_id=(
-                            str(media.get("source_status_id"))
-                            if media.get("source_status_id") is not None
-                            else None
-                        ),
-                        source_status_id_str=(
-                            str(media.get("source_status_id_str"))
-                            if media.get("source_status_id_str") is not None
-                            else None
-                        ),
-                        source_user_id=(
-                            str(media.get("source_user_id"))
-                            if media.get("source_user_id") is not None
-                            else None
-                        ),
-                        source_user_id_str=(
-                            str(media.get("source_user_id_str"))
-                            if media.get("source_user_id_str") is not None
-                            else None
-                        ),
+                        source_status_id=_optional_str(media.get("source_status_id")),
+                        source_status_id_str=_optional_str(media.get("source_status_id_str")),
+                        source_user_id=_optional_str(media.get("source_user_id")),
+                        source_user_id_str=_optional_str(media.get("source_user_id_str")),
                     )
                 )
                 counts["tweet_media"] += 1
@@ -518,31 +453,11 @@ def import_archive_data(
                         if display_text_range is not None
                         else None
                     ),
-                    in_reply_to_status_id=(
-                        str(tweet.get("in_reply_to_status_id"))
-                        if tweet.get("in_reply_to_status_id") is not None
-                        else None
-                    ),
-                    in_reply_to_status_id_str=(
-                        str(tweet.get("in_reply_to_status_id_str"))
-                        if tweet.get("in_reply_to_status_id_str") is not None
-                        else None
-                    ),
-                    in_reply_to_user_id=(
-                        str(tweet.get("in_reply_to_user_id"))
-                        if tweet.get("in_reply_to_user_id") is not None
-                        else None
-                    ),
-                    in_reply_to_user_id_str=(
-                        str(tweet.get("in_reply_to_user_id_str"))
-                        if tweet.get("in_reply_to_user_id_str") is not None
-                        else None
-                    ),
-                    in_reply_to_screen_name=(
-                        str(tweet.get("in_reply_to_screen_name"))
-                        if tweet.get("in_reply_to_screen_name") is not None
-                        else None
-                    ),
+                    in_reply_to_status_id=_optional_str(tweet.get("in_reply_to_status_id")),
+                    in_reply_to_status_id_str=_optional_str(tweet.get("in_reply_to_status_id_str")),
+                    in_reply_to_user_id=_optional_str(tweet.get("in_reply_to_user_id")),
+                    in_reply_to_user_id_str=_optional_str(tweet.get("in_reply_to_user_id_str")),
+                    in_reply_to_screen_name=_optional_str(tweet.get("in_reply_to_screen_name")),
                     possibly_sensitive=(
                         bool(tweet.get("possibly_sensitive"))
                         if tweet.get("possibly_sensitive") is not None
@@ -572,31 +487,11 @@ def import_archive_data(
                 if display_text_range is not None
                 else None
             )
-            existing.in_reply_to_status_id = (
-                str(tweet.get("in_reply_to_status_id"))
-                if tweet.get("in_reply_to_status_id") is not None
-                else None
-            )
-            existing.in_reply_to_status_id_str = (
-                str(tweet.get("in_reply_to_status_id_str"))
-                if tweet.get("in_reply_to_status_id_str") is not None
-                else None
-            )
-            existing.in_reply_to_user_id = (
-                str(tweet.get("in_reply_to_user_id"))
-                if tweet.get("in_reply_to_user_id") is not None
-                else None
-            )
-            existing.in_reply_to_user_id_str = (
-                str(tweet.get("in_reply_to_user_id_str"))
-                if tweet.get("in_reply_to_user_id_str") is not None
-                else None
-            )
-            existing.in_reply_to_screen_name = (
-                str(tweet.get("in_reply_to_screen_name"))
-                if tweet.get("in_reply_to_screen_name") is not None
-                else None
-            )
+            existing.in_reply_to_status_id = _optional_str(tweet.get("in_reply_to_status_id"))
+            existing.in_reply_to_status_id_str = _optional_str(tweet.get("in_reply_to_status_id_str"))
+            existing.in_reply_to_user_id = _optional_str(tweet.get("in_reply_to_user_id"))
+            existing.in_reply_to_user_id_str = _optional_str(tweet.get("in_reply_to_user_id_str"))
+            existing.in_reply_to_screen_name = _optional_str(tweet.get("in_reply_to_screen_name"))
             existing.possibly_sensitive = (
                 bool(tweet.get("possibly_sensitive"))
                 if tweet.get("possibly_sensitive") is not None
@@ -798,11 +693,11 @@ def import_archive_data(
 
 
 def import_archive(
-    db_url: Optional[str],
+    db_url: str | None,
     *,
-    username: Optional[str] = None,
-    url: Optional[str] = None,
-    path: Optional[str | Path] = None,
+    username: str | None = None,
+    url: str | None = None,
+    path: str | Path | None = None,
     batch_size: int = 1000,
 ) -> dict[str, int]:
     if not db_url:
@@ -812,13 +707,13 @@ def import_archive(
         if username:
             url = build_archive_url(username)
         elif path is None:
-            raise ValueError("Provide username, url, or path.")
+            raise ValueError("username、url、または path を指定してください。")
 
     if url:
         data = download_archive(url)
     else:
         if path is None:
-            raise ValueError("Provide username, url, or path.")
+            raise ValueError("username、url、または path を指定してください。")
         data = load_archive(Path(path))
 
     engine = get_engine(db_url)

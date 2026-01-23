@@ -78,7 +78,7 @@ def _param(
 
 def _validate_user_last_tweets(params: dict[str, Any]) -> list[str]:
     if not params.get("userId") and not params.get("userName"):
-        return ["user-id or user-name is required"]
+        return ["user-id または user-name が必要です"]
     return []
 
 
@@ -86,189 +86,189 @@ READ_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec(
         command="account-my-info",
         path="/oapi/my/info",
-        description="Get account info for current API key",
+        description="現在のAPIキーのアカウント情報を取得",
     ),
     EndpointSpec(
         command="tweet-filter-rules",
         path="/oapi/tweet_filter/get_rules",
-        description="Get all tweet filter rules",
+        description="全ツイートフィルタールールを取得",
     ),
     EndpointSpec(
         command="monitor-users",
         path="/oapi/x_user_stream/get_user_to_monitor_tweet",
-        description="Get users monitored for real-time tweets",
+        description="リアルタイムツイート監視対象ユーザーを取得",
     ),
     EndpointSpec(
         command="tweet-article",
         path="/twitter/article",
-        description="Get article by tweet ID",
+        description="ツイートIDで記事を取得",
         params=(
-            _param("tweet_id", "Tweet ID of the article", required=True),
+            _param("tweet_id", "記事のツイートID", required=True),
         ),
     ),
     EndpointSpec(
         command="community-all-tweets",
         path="/twitter/community/get_tweets_from_all_community",
-        description="Search tweets from all communities",
+        description="全コミュニティからツイートを検索",
         params=(
-            _param("query", "Keyword query", required=True),
+            _param("query", "キーワードクエリ", required=True),
             _param(
                 "queryType",
-                "Query type",
+                "クエリタイプ",
                 default="Latest",
                 choices=("Latest", "Top"),
             ),
-            _param("cursor", "Pagination cursor"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="community-info",
         path="/twitter/community/info",
-        description="Get community info",
+        description="コミュニティ情報を取得",
         params=(
-            _param("community_id", "Community ID", required=True),
+            _param("community_id", "コミュニティID", required=True),
         ),
     ),
     EndpointSpec(
         command="community-members",
         path="/twitter/community/members",
-        description="Get community members",
+        description="コミュニティメンバーを取得",
         params=(
-            _param("community_id", "Community ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("community_id", "コミュニティID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="community-moderators",
         path="/twitter/community/moderators",
-        description="Get community moderators",
+        description="コミュニティモデレーターを取得",
         params=(
-            _param("community_id", "Community ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("community_id", "コミュニティID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="community-tweets",
         path="/twitter/community/tweets",
-        description="Get community tweets",
+        description="コミュニティツイートを取得",
         params=(
-            _param("community_id", "Community ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("community_id", "コミュニティID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="dm-history",
         path="/twitter/get_dm_history_by_user_id",
-        description="Get direct message history with a user",
+        description="ユーザーとのDM履歴を取得",
         params=(
-            _param("login_cookies", "Login cookies", required=True),
-            _param("user_id", "Target user ID", required=True),
-            _param("proxy", "Proxy URL"),
+            _param("login_cookies", "ログインCookie", required=True),
+            _param("user_id", "対象ユーザーID", required=True),
+            _param("proxy", "プロキシURL"),
         ),
     ),
     EndpointSpec(
         command="account-detail",
         path="/twitter/get_my_x_account_detail_v3",
-        description="Get account detail for a logged-in X account",
+        description="ログイン中のXアカウント詳細を取得",
         params=(
-            _param("user_name", "Username", required=True),
+            _param("user_name", "ユーザー名", required=True),
         ),
     ),
     EndpointSpec(
         command="list-followers",
         path="/twitter/list/followers",
-        description="Get list followers",
+        description="リストのフォロワーを取得",
         params=(
-            _param("list_id", "List ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("list_id", "リストID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="list-members",
         path="/twitter/list/members",
-        description="Get list members",
+        description="リストのメンバーを取得",
         params=(
-            _param("list_id", "List ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("list_id", "リストID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="list-tweets",
         path="/twitter/list/tweets",
-        description="Get list tweets",
+        description="リストのツイートを取得",
         params=(
-            _param("listId", "List ID", required=True),
-            _param("sinceTime", "Since time (unix seconds)", param_type="integer"),
-            _param("untilTime", "Until time (unix seconds)", param_type="integer"),
-            _param("includeReplies", "Include replies (true/false)", param_type="boolean"),
-            _param("cursor", "Pagination cursor"),
+            _param("listId", "リストID", required=True),
+            _param("sinceTime", "開始時刻（UNIX秒）", param_type="integer"),
+            _param("untilTime", "終了時刻（UNIX秒）", param_type="integer"),
+            _param("includeReplies", "リプライを含む（true/false）", param_type="boolean"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="space-detail",
         path="/twitter/spaces/detail",
-        description="Get space detail",
+        description="スペースの詳細を取得",
         params=(
-            _param("space_id", "Space ID", required=True),
+            _param("space_id", "スペースID", required=True),
         ),
     ),
     EndpointSpec(
         command="trends",
         path="/twitter/trends",
-        description="Get trends by WOEID",
+        description="WOEIDでトレンドを取得",
         params=(
             _param("woeid", "WOEID", required=True, param_type="integer"),
-            _param("count", "Number of trends", param_type="integer"),
+            _param("count", "トレンド数", param_type="integer"),
         ),
     ),
     EndpointSpec(
         command="tweet-search",
         path="/twitter/tweet/advanced_search",
-        description="Advanced search for tweets",
+        description="ツイートの高度な検索",
         params=(
-            _param("query", "Search query", required=True),
+            _param("query", "検索クエリ", required=True),
             _param(
                 "queryType",
-                "Query type",
+                "クエリタイプ",
                 default="Latest",
                 choices=("Latest", "Top"),
             ),
-            _param("cursor", "Pagination cursor"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="tweet-quotes",
         path="/twitter/tweet/quotes",
-        description="Get tweet quotes",
+        description="ツイートの引用を取得",
         params=(
-            _param("tweetId", "Tweet ID", required=True),
-            _param("sinceTime", "Since time (unix seconds)", param_type="integer"),
-            _param("untilTime", "Until time (unix seconds)", param_type="integer"),
-            _param("includeReplies", "Include replies (true/false)", param_type="boolean"),
-            _param("cursor", "Pagination cursor"),
+            _param("tweetId", "ツイートID", required=True),
+            _param("sinceTime", "開始時刻（UNIX秒）", param_type="integer"),
+            _param("untilTime", "終了時刻（UNIX秒）", param_type="integer"),
+            _param("includeReplies", "リプライを含む（true/false）", param_type="boolean"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="tweet-replies",
         path="/twitter/tweet/replies",
-        description="Get tweet replies",
+        description="ツイートのリプライを取得",
         params=(
-            _param("tweetId", "Tweet ID", required=True),
-            _param("sinceTime", "Since time (unix seconds)", param_type="integer"),
-            _param("untilTime", "Until time (unix seconds)", param_type="integer"),
-            _param("cursor", "Pagination cursor"),
+            _param("tweetId", "ツイートID", required=True),
+            _param("sinceTime", "開始時刻（UNIX秒）", param_type="integer"),
+            _param("untilTime", "終了時刻（UNIX秒）", param_type="integer"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="tweet-replies-v2",
         path="/twitter/tweet/replies/v2",
-        description="Get tweet replies (V2)",
+        description="ツイートのリプライを取得（V2）",
         params=(
-            _param("tweetId", "Tweet ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("tweetId", "ツイートID", required=True),
+            _param("cursor", "ページネーションカーソル"),
             _param(
                 "queryType",
-                "Query type",
+                "クエリタイプ",
                 default="Relevance",
                 choices=("Relevance", "Latest", "Likes"),
             ),
@@ -277,121 +277,121 @@ READ_ENDPOINTS: tuple[EndpointSpec, ...] = (
     EndpointSpec(
         command="tweet-retweeters",
         path="/twitter/tweet/retweeters",
-        description="Get tweet retweeters",
+        description="ツイートのリツイートユーザーを取得",
         params=(
-            _param("tweetId", "Tweet ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("tweetId", "ツイートID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="tweet-thread-context",
         path="/twitter/tweet/thread_context",
-        description="Get tweet thread context",
+        description="ツイートのスレッドコンテキストを取得",
         params=(
-            _param("tweetId", "Tweet ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("tweetId", "ツイートID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="tweet-by-ids",
         path="/twitter/tweets",
-        description="Get tweets by IDs",
+        description="IDでツイートを取得",
         params=(
-            _param("tweet_ids", "Tweet IDs", required=True, param_type="array", multi=True),
+            _param("tweet_ids", "ツイートID", required=True, param_type="array", multi=True),
         ),
     ),
     EndpointSpec(
         command="user-batch-ids",
         path="/twitter/user/batch_info_by_ids",
-        description="Batch get users by IDs",
+        description="IDで複数ユーザーを一括取得",
         params=(
-            _param("userIds", "User IDs", required=True, multi=True),
+            _param("userIds", "ユーザーID", required=True, multi=True),
         ),
     ),
     EndpointSpec(
         command="user-follow-relationship",
         path="/twitter/user/check_follow_relationship",
-        description="Check follow relationship",
+        description="フォロー関係を確認",
         params=(
-            _param("source_user_name", "Source username", required=True),
-            _param("target_user_name", "Target username", required=True),
+            _param("source_user_name", "元ユーザー名", required=True),
+            _param("target_user_name", "対象ユーザー名", required=True),
         ),
     ),
     EndpointSpec(
         command="user-followers",
         path="/twitter/user/followers",
-        description="Get user followers",
+        description="ユーザーのフォロワーを取得",
         params=(
-            _param("userName", "Username", required=True),
-            _param("cursor", "Pagination cursor"),
-            _param("pageSize", "Page size (20-200)", param_type="integer"),
+            _param("userName", "ユーザー名", required=True),
+            _param("cursor", "ページネーションカーソル"),
+            _param("pageSize", "ページサイズ（20-200）", param_type="integer"),
         ),
     ),
     EndpointSpec(
         command="user-followings",
         path="/twitter/user/followings",
-        description="Get user followings",
+        description="ユーザーのフォロー中を取得",
         params=(
-            _param("userName", "Username", required=True),
-            _param("cursor", "Pagination cursor"),
-            _param("pageSize", "Page size (20-200)", param_type="integer"),
+            _param("userName", "ユーザー名", required=True),
+            _param("cursor", "ページネーションカーソル"),
+            _param("pageSize", "ページサイズ（20-200）", param_type="integer"),
         ),
     ),
     EndpointSpec(
         command="user-info",
         path="/twitter/user/info",
-        description="Get user info by username",
+        description="ユーザー名でユーザー情報を取得",
         params=(
-            _param("userName", "Username", required=True),
+            _param("userName", "ユーザー名", required=True),
         ),
     ),
     EndpointSpec(
         command="user-last-tweets",
         path="/twitter/user/last_tweets",
-        description="Get user last tweets",
+        description="ユーザーの最新ツイートを取得",
         params=(
-            _param("userId", "User ID"),
-            _param("userName", "Username"),
-            _param("cursor", "Pagination cursor"),
-            _param("includeReplies", "Include replies (true/false)", param_type="boolean"),
+            _param("userId", "ユーザーID"),
+            _param("userName", "ユーザー名"),
+            _param("cursor", "ページネーションカーソル"),
+            _param("includeReplies", "リプライを含む（true/false）", param_type="boolean"),
         ),
         validator=_validate_user_last_tweets,
     ),
     EndpointSpec(
         command="user-mentions",
         path="/twitter/user/mentions",
-        description="Get user mentions",
+        description="ユーザーのメンションを取得",
         params=(
-            _param("userName", "Username", required=True),
-            _param("sinceTime", "Since time (unix seconds)", param_type="integer"),
-            _param("untilTime", "Until time (unix seconds)", param_type="integer"),
-            _param("cursor", "Pagination cursor"),
+            _param("userName", "ユーザー名", required=True),
+            _param("sinceTime", "開始時刻（UNIX秒）", param_type="integer"),
+            _param("untilTime", "終了時刻（UNIX秒）", param_type="integer"),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="user-search",
         path="/twitter/user/search",
-        description="Search users by keyword",
+        description="キーワードでユーザーを検索",
         params=(
-            _param("query", "Search keyword", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("query", "検索キーワード", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="user-verified-followers",
         path="/twitter/user/verifiedFollowers",
-        description="Get user verified followers",
+        description="認証済みフォロワーを取得",
         params=(
-            _param("user_id", "User ID", required=True),
-            _param("cursor", "Pagination cursor"),
+            _param("user_id", "ユーザーID", required=True),
+            _param("cursor", "ページネーションカーソル"),
         ),
     ),
     EndpointSpec(
         command="user-about",
         path="/twitter/user_about",
-        description="Get user profile about by username",
+        description="ユーザー名でプロフィール概要を取得",
         params=(
-            _param("userName", "Username", required=True),
+            _param("userName", "ユーザー名", required=True),
         ),
     ),
 )
@@ -416,7 +416,7 @@ def register_read_subcommands(subparsers: argparse._SubParsersAction) -> None:
             if param.multi:
                 kwargs["nargs"] = "+"
             parser.add_argument(arg_name, dest=param.dest, **kwargs)
-        parser.add_argument("--json", action="store_true", help="Output raw JSON response")
+        parser.add_argument("--json", action="store_true", help="JSON形式で出力")
         parser.set_defaults(read_spec=spec)
 
 
@@ -451,10 +451,10 @@ def _validate_required_params(spec: EndpointSpec, params: dict[str, Any]) -> lis
             continue
         value = params.get(param.api_name)
         if value is None:
-            errors.append(f"{param.cli_name} is required")
+            errors.append(f"{param.cli_name} は必須です")
             continue
         if isinstance(value, str) and not value.strip():
-            errors.append(f"{param.cli_name} is required")
+            errors.append(f"{param.cli_name} は必須です")
     return errors
 
 
@@ -480,7 +480,7 @@ def call_read_endpoint(path: str, params: dict[str, Any]) -> tuple[bool, str | d
             payload = response.json()
         except ValueError:
             message = response.text.strip() or response.reason
-            return False, f"Invalid JSON response: {message}"
+            return False, f"無効なJSONレスポンス: {message}"
         if response.ok:
             status = payload.get("status")
             if status in (None, "success"):
@@ -488,13 +488,13 @@ def call_read_endpoint(path: str, params: dict[str, Any]) -> tuple[bool, str | d
         message = payload.get("msg") or payload.get("message") or response.reason
         return False, message
     except Exception as exc:
-        return False, f"Error requesting {path}: {exc}"
+        return False, f"{path} へのリクエストエラー: {exc}"
 
 
 def execute_read_command(args: argparse.Namespace) -> tuple[bool, str | dict[str, Any]]:
     spec: EndpointSpec | None = getattr(args, "read_spec", None)
     if spec is None:
-        return False, "Unknown read command"
+        return False, "不明なreadコマンドです"
     params, errors = build_read_params(spec, args)
     if errors:
         return False, "; ".join(errors)
