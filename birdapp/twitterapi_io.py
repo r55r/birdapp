@@ -83,7 +83,7 @@ def login_user(store_cookie: bool = True) -> dict[str, Any]:
         message = data.get("msg") or response.text
         raise RuntimeError(f"Login failed: {message}")
 
-    login_cookie = data.get("login_cookie")
+    login_cookie = data.get("login_cookies") or data.get("login_cookie")
     if not login_cookie:
         raise RuntimeError("Login response missing login_cookie")
     if store_cookie:

@@ -28,11 +28,11 @@ def get_users_by_ids(user_ids: List[str]) -> Tuple[bool, Union[Dict[str, Any], s
     try:
         response = request("GET", "/twitter/user/batch_info_by_ids", params=params)
         payload = response.json()
-        if response.ok and payload.get("status") == "success":
-            return True, {"users": payload.get("users", [])}
-        message = _handle_api_error(payload, response.reason)
-        logger.error("Failed to retrieve users by id: %s", message)
-        return False, message
+        if not response.ok:
+            message = _handle_api_error(payload, response.reason)
+            logger.error("Failed to retrieve users by id: %s", message)
+            return False, message
+        return True, {"users": payload.get("users", [])}
     except Exception as e:
         logger.error("Error retrieving users by id: %s", str(e))
         return False, str(e)
@@ -44,19 +44,19 @@ def get_user_by_username(username: str) -> Tuple[bool, Union[Dict[str, Any], str
     try:
         response = request("GET", "/twitter/user/search", params={"query": username})
         payload = response.json()
-        if response.ok and payload.get("status") == "success":
-            users = payload.get("users", [])
-            match = next(
-                (user for user in users if user.get("userName", "").lower() == username.lower()),
-                None,
-            )
-            if match:
-                return True, {"users": [match]}
-            return False, f"User @{username} not found"
+        if not response.ok:
+            message = _handle_api_error(payload, response.reason)
+            logger.error("Failed to retrieve user by username: %s", message)
+            return False, message
 
-        message = _handle_api_error(payload, response.reason)
-        logger.error("Failed to retrieve user by username: %s", message)
-        return False, message
+        users = payload.get("users", [])
+        match = next(
+            (user for user in users if (user.get("screen_name") or user.get("userName") or "").lower() == username.lower()),
+            None,
+        )
+        if match:
+            return True, {"users": [match]}
+        return False, f"User @{username} not found"
     except Exception as e:
         logger.error("Error retrieving user by username: %s", str(e))
         return False, str(e)

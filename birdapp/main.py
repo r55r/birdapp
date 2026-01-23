@@ -282,6 +282,15 @@ def format_tweets_output(data: dict, format_type: str):
 
             print("-" * 50)
 
+def _user_field(user: dict, *keys: str, default: object = None) -> object:
+    """Get a field from user dict, trying multiple key names."""
+    for key in keys:
+        val = user.get(key)
+        if val is not None:
+            return val
+    return default
+
+
 def format_users_output(data: dict, format_type: str):
     """Format and display user data"""
     if 'users' not in data:
@@ -293,24 +302,35 @@ def format_users_output(data: dict, format_type: str):
         users = [users]
 
     for user in users:
+        username = _user_field(user, 'screen_name', 'userName', default='unknown')
+        followers = _user_field(user, 'followers_count', 'followers', default=0)
+        following = _user_field(user, 'following_count', 'friends_count', 'following', default=0)
+        tweets = _user_field(user, 'statuses_count', 'statusesCount', default=0)
+        likes = _user_field(user, 'favourites_count', 'favouritesCount', default=0)
+        media = _user_field(user, 'media_tweets_count', 'mediaCount', default=0)
+        created = _user_field(user, 'created_at', 'createdAt')
+        profile_img = _user_field(user, 'profile_image_url_https', 'profilePicture')
+        banner_img = _user_field(user, 'profile_banner_url', 'coverPicture')
+        can_dm = _user_field(user, 'can_dm', 'canDm')
+
         if format_type == 'simple':
             print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Username: @{username}")
             print(f"Name: {user.get('name', 'Unknown')}")
             if user.get('description'):
                 print(f"Bio: {user.get('description', '')[:100]}...")
             print("-" * 50)
-            
+
         elif format_type == 'detailed':
             print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Username: @{username}")
             print(f"Name: {user.get('name', 'Unknown')}")
 
             if user.get('description'):
                 print(f"Bio: {user.get('description')}")
 
-            if user.get('createdAt'):
-                print(f"Joined: {user.get('createdAt')}")
+            if created:
+                print(f"Joined: {created}")
 
             if user.get('location'):
                 print(f"Location: {user.get('location')}")
@@ -318,32 +338,32 @@ def format_users_output(data: dict, format_type: str):
             if user.get('url'):
                 print(f"Profile URL: {user.get('url')}")
 
-            print(f"Followers: {user.get('followers', 0):,}")
-            print(f"Following: {user.get('following', 0):,}")
-            print(f"Tweets: {user.get('statusesCount', 0):,}")
-            print(f"Likes: {user.get('favouritesCount', 0):,}")
-            print(f"Media: {user.get('mediaCount', 0):,}")
+            print(f"Followers: {followers:,}")
+            print(f"Following: {following:,}")
+            print(f"Tweets: {tweets:,}")
+            print(f"Likes: {likes:,}")
+            print(f"Media: {media:,}")
 
             if user.get('isBlueVerified'):
                 print("✓ Blue verified account")
             if user.get('verifiedType'):
                 print(f"Verified type: {user.get('verifiedType')}")
-            if user.get('canDm') is True:
+            if can_dm is True:
                 print("✓ DMs enabled")
 
             print("-" * 50)
-            
+
         else:  # full
             print("=== User Profile ===")
             print(f"User ID: {user.get('id', 'unknown')}")
-            print(f"Username: @{user.get('userName', 'unknown')}")
+            print(f"Username: @{username}")
             print(f"Name: {user.get('name', 'Unknown')}")
 
             if user.get('description'):
                 print(f"\nBio: {user.get('description')}")
 
-            if user.get('createdAt'):
-                print(f"\nAccount created: {user.get('createdAt')}")
+            if created:
+                print(f"\nAccount created: {created}")
 
             if user.get('location'):
                 print(f"Location: {user.get('location')}")
@@ -351,25 +371,25 @@ def format_users_output(data: dict, format_type: str):
             if user.get('url'):
                 print(f"Profile URL: {user.get('url')}")
 
-            if user.get('profilePicture'):
-                print(f"Profile image: {user.get('profilePicture')}")
+            if profile_img:
+                print(f"Profile image: {profile_img}")
 
-            if user.get('coverPicture'):
-                print(f"Banner image: {user.get('coverPicture')}")
+            if banner_img:
+                print(f"Banner image: {banner_img}")
 
             print("\n=== Metrics ===")
-            print(f"Followers: {user.get('followers', 0):,}")
-            print(f"Following: {user.get('following', 0):,}")
-            print(f"Tweets: {user.get('statusesCount', 0):,}")
-            print(f"Likes: {user.get('favouritesCount', 0):,}")
-            print(f"Media: {user.get('mediaCount', 0):,}")
+            print(f"Followers: {followers:,}")
+            print(f"Following: {following:,}")
+            print(f"Tweets: {tweets:,}")
+            print(f"Likes: {likes:,}")
+            print(f"Media: {media:,}")
 
             status_items = []
             if user.get('isBlueVerified'):
                 status_items.append("✓ Blue verified")
             if user.get('verifiedType'):
                 status_items.append(f"Verified type: {user.get('verifiedType')}")
-            if user.get('canDm') is True:
+            if can_dm is True:
                 status_items.append("DMs enabled")
             if user.get('isTranslator') is True:
                 status_items.append("Translator")

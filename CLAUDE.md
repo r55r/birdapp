@@ -46,3 +46,6 @@ uv run ruff check birdapp/path/to_file.py
 uv run ty check birdapp/path/to_file.py
 uv run pytest tests/test_auth_cli.py
 ```
+
+また、編集後はcode simpliferエージェントでコードをリファクタして下さい。
+認証情報をコミットに含めないでください。
