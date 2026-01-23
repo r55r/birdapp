@@ -88,6 +88,28 @@ birdapp user 44196397 --by-id
 birdapp user elonmusk --format detailed
 ```
 
+### 取得系エンドポイント（read コマンド）
+
+TwitterAPI.io の GET エンドポイントをまとめて利用できます。全サブコマンドは以下で確認してください：
+
+```bash
+birdapp read --help
+```
+
+例：
+
+```bash
+birdapp read tweet-search --query "AI" --query-type Latest
+birdapp read tweet-replies --tweet-id 1846987139428634858
+birdapp read user-followers --user-name nasa
+birdapp read list-tweets --list-id 1846987139428634858
+birdapp read community-info --community-id 1234567890
+birdapp read space-detail --space-id 1OdKrBxyz
+birdapp read trends --woeid 23424856 --count 30
+```
+
+`--json` を指定するとコンパクトな JSON を出力します。
+
 ### Twitter Community Archiveからのツイートのインポート
 
 Twitter Community Archiveを通じてツイートを公開共有している場合、アーカイブからダウンロードしてSQLiteデータベースにインポートし、ローカルで検索・分析できます：

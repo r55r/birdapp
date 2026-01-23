@@ -12,6 +12,7 @@ from .user import (
     get_user_by_id, get_users_by_ids,
     get_user_by_username, get_users_by_usernames,
 )
+from .read_api import execute_read_command, register_read_subcommands
 
 
 def main() -> None:
@@ -71,6 +72,11 @@ def main() -> None:
         help='Batch size for inserts (default: 1000)',
     )
     import_parser.add_argument('--json', action='store_true', help='Output raw JSON result')
+
+    # Read-only endpoints subcommand
+    read_parser = subparsers.add_parser('read', help='Read data via TwitterAPI.io GET endpoints')
+    read_subparsers = read_parser.add_subparsers(dest='read_command', required=True)
+    register_read_subcommands(read_subparsers)
     
     # Parse arguments
     args = parser.parse_args()
@@ -190,6 +196,20 @@ def main() -> None:
                     print(f"{key}: {value}")
         except Exception as e:
             print(f"❌ Error importing archive: {str(e)}")
+
+    # Handle read command
+    if args.command == 'read':
+        try:
+            success, result = execute_read_command(args)
+            if success:
+                if args.json:
+                    print(json.dumps(result))
+                else:
+                    print(json.dumps(result, indent=2))
+            else:
+                print(f"❌ Failed to get data: {result}")
+        except Exception as e:
+            print(f"❌ Error getting data: {str(e)}")
 
 def format_tweets_output(data: dict, format_type: str):
     """Format and display tweet data"""
