@@ -1,7 +1,16 @@
 import argparse
 import json
 
-from .tweet import get_tweets_by_ids
+from .tweet import (
+    get_tweet_article,
+    get_tweet_quotes,
+    get_tweet_replies,
+    get_tweet_replies_v2,
+    get_tweet_retweeters,
+    get_tweet_thread_context,
+    get_tweets_by_ids,
+    search_tweets_advanced,
+)
 from .config import (
     get_credential,
     prompt_for_credentials,
@@ -13,6 +22,15 @@ from .user import (
     get_user_by_username, get_users_by_usernames,
 )
 from .read_api import execute_read_command, register_read_subcommands
+
+
+def _parse_bool(value: str) -> bool:
+    lowered = value.strip().lower()
+    if lowered in {"true", "1", "yes", "y"}:
+        return True
+    if lowered in {"false", "0", "no", "n"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value}")
 
 
 def main() -> None:
@@ -35,6 +53,60 @@ def main() -> None:
     get_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
     get_parser.add_argument('--format', choices=['simple', 'detailed'], default='simple',
                            help='出力形式（simple または detailed）')
+
+    tweet_parser = subparsers.add_parser('tweet', help='ツイート関連の取得')
+    tweet_subparsers = tweet_parser.add_subparsers(dest='tweet_command', required=True)
+
+    tweet_replies_parser = tweet_subparsers.add_parser('replies', help='ツイートのリプライを取得')
+    tweet_replies_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_replies_parser.add_argument('--since-time', type=int, help='開始時刻（UNIX秒）')
+    tweet_replies_parser.add_argument('--until-time', type=int, help='終了時刻（UNIX秒）')
+    tweet_replies_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_replies_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_replies_v2_parser = tweet_subparsers.add_parser('replies-v2', help='ツイートのリプライを取得（V2）')
+    tweet_replies_v2_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_replies_v2_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_replies_v2_parser.add_argument(
+        '--query-type',
+        default='Relevance',
+        choices=['Relevance', 'Latest', 'Likes'],
+        help='クエリタイプ',
+    )
+    tweet_replies_v2_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_quotes_parser = tweet_subparsers.add_parser('quotes', help='ツイートの引用を取得')
+    tweet_quotes_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_quotes_parser.add_argument('--since-time', type=int, help='開始時刻（UNIX秒）')
+    tweet_quotes_parser.add_argument('--until-time', type=int, help='終了時刻（UNIX秒）')
+    tweet_quotes_parser.add_argument('--include-replies', type=_parse_bool, help='リプライを含む（true/false）')
+    tweet_quotes_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_quotes_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_retweeters_parser = tweet_subparsers.add_parser('retweeters', help='ツイートのリツイートユーザーを取得')
+    tweet_retweeters_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_retweeters_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_retweeters_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_thread_parser = tweet_subparsers.add_parser('thread-context', help='ツイートのスレッド情報を取得')
+    tweet_thread_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_thread_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_thread_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_article_parser = tweet_subparsers.add_parser('article', help='ツイートIDから記事を取得')
+    tweet_article_parser.add_argument('--tweet-id', required=True, help='ツイートID')
+    tweet_article_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
+
+    tweet_search_parser = tweet_subparsers.add_parser('search', help='ツイートを高度な検索で取得')
+    tweet_search_parser.add_argument('--query', required=True, help='検索クエリ')
+    tweet_search_parser.add_argument(
+        '--query-type',
+        default='Latest',
+        choices=['Latest', 'Top'],
+        help='クエリタイプ',
+    )
+    tweet_search_parser.add_argument('--cursor', help='ページネーションカーソル')
+    tweet_search_parser.add_argument('--json', action='store_true', help='JSON形式で出力')
     
     user_parser = subparsers.add_parser('user', help='ユーザー情報を検索')
     user_parser.add_argument('identifiers', nargs='+',
@@ -120,7 +192,56 @@ def main() -> None:
                 
         except Exception as e:
             print(f"❌ ツイート取得エラー: {str(e)}")
-    
+
+    if args.command == 'tweet':
+        try:
+            if args.tweet_command == 'replies':
+                success, result = get_tweet_replies(
+                    args.tweet_id,
+                    since_time=args.since_time,
+                    until_time=args.until_time,
+                    cursor=args.cursor,
+                )
+            elif args.tweet_command == 'replies-v2':
+                success, result = get_tweet_replies_v2(
+                    args.tweet_id,
+                    cursor=args.cursor,
+                    query_type=args.query_type,
+                )
+            elif args.tweet_command == 'quotes':
+                success, result = get_tweet_quotes(
+                    args.tweet_id,
+                    since_time=args.since_time,
+                    until_time=args.until_time,
+                    include_replies=args.include_replies,
+                    cursor=args.cursor,
+                )
+            elif args.tweet_command == 'retweeters':
+                success, result = get_tweet_retweeters(args.tweet_id, cursor=args.cursor)
+            elif args.tweet_command == 'thread-context':
+                success, result = get_tweet_thread_context(args.tweet_id, cursor=args.cursor)
+            elif args.tweet_command == 'article':
+                success, result = get_tweet_article(args.tweet_id)
+            elif args.tweet_command == 'search':
+                success, result = search_tweets_advanced(
+                    args.query,
+                    query_type=args.query_type,
+                    cursor=args.cursor,
+                )
+            else:
+                print("不明なツイートコマンドです")
+                return
+
+            if success:
+                if args.json:
+                    print(json.dumps(result))
+                else:
+                    print(json.dumps(result, indent=2))
+            else:
+                print(f"❌ ツイート取得に失敗: {result}")
+        except Exception as e:
+            print(f"❌ ツイート取得エラー: {str(e)}")
+
     if args.command == 'user':
         try:
             identifiers = args.identifiers
